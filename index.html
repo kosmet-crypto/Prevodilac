@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Преводилац српски–норвешки</title>
-  <meta name="description" content="Српско–норвешки преводилац у духу језика, са нивоима CEFR A1–C2.">
+  <meta name="description" content="Бесплатан српско–норвешки преводилац са фразама, идиомима и напоменама.">
   <meta name="theme-color" content="#1f4e79">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🗣️</text></svg>">
   <link rel="stylesheet" href="style.css">
@@ -15,27 +15,15 @@
     <div class="topbar-actions">
       <button id="themeBtn" class="icon-btn" type="button" title="Промени тему" aria-label="Промени тему">◐</button>
       <button id="historyBtn" class="icon-btn" type="button" title="Историја" aria-label="Историја">🕘</button>
-      <button id="settingsBtn" class="icon-btn" type="button" title="Подешавања" aria-label="Подешавања">⚙️</button>
     </div>
   </header>
 
   <main class="container">
-    <div id="keyWarning" class="banner" hidden>
-      Да би превођење радило, унеси свој Claude API кључ у
-      <button type="button" class="link-btn" id="openSettingsFromBanner">подешавањима</button>.
-    </div>
-
     <section class="card">
       <div class="direction">
         <span id="srcLabel" class="lang">Српски</span>
         <button id="swapBtn" class="swap" type="button" title="Замени смер" aria-label="Замени смер">⇄</button>
         <span id="tgtLabel" class="lang">Norsk (bokmål)</span>
-      </div>
-
-      <div class="field">
-        <span class="label">Ниво норвешког (CEFR)</span>
-        <div class="levels" id="levels" role="radiogroup" aria-label="Ниво CEFR"></div>
-        <p id="levelDesc" class="level-desc"></p>
       </div>
 
       <div class="field" id="scriptField" hidden>
@@ -50,7 +38,7 @@
         <label for="input" id="inputLabel">Текст на српском (ћирилица или латиница)</label>
         <textarea id="input" rows="5" placeholder="нпр. Пала ми је секира у мед — данас сам добио посао!"></textarea>
         <div class="row">
-          <span id="charCount" class="muted">0 / 5000</span>
+          <span id="charCount" class="muted">0 / 1000</span>
           <div class="row-actions">
             <button id="speakInputBtn" class="ghost" type="button" hidden>🔊 Изговори</button>
             <button id="clearBtn" class="ghost" type="button">Обриши</button>
@@ -64,41 +52,25 @@
     <div id="status" class="status" role="status" aria-live="polite"></div>
 
     <section id="result" class="result" hidden>
-      <article class="card">
+      <article class="card" id="translationCard">
         <header class="card-head">
-          <h2>Природан превод</h2>
+          <h2>Превод</h2>
           <div class="row-actions">
             <button class="ghost speak-btn" data-target="naturalText" type="button" hidden>🔊</button>
             <button class="ghost copy-btn" data-target="naturalText" type="button">📋 Копирај</button>
           </div>
         </header>
-        <p class="explain muted">Како би то рекао изворни говорник — не реч по реч.</p>
         <p id="naturalText" class="translation"></p>
-      </article>
-
-      <article class="card">
-        <header class="card-head">
-          <h2>Буквалан превод</h2>
-          <div class="row-actions">
-            <button class="ghost copy-btn" data-target="literalText" type="button">📋 Копирај</button>
-          </div>
-        </header>
-        <p class="explain muted">Дословно, да се види структура реченице.</p>
-        <p id="literalText" class="translation literal"></p>
+        <div id="altWrap" hidden>
+          <h3 class="subhead">Други преводи из базе</h3>
+          <ul id="alternatives" class="alts"></ul>
+        </div>
+        <p class="explain muted">Машински превод: MyMemory. Може да буде дослован или нетачан, нарочито код идиома, па погледај и фразе испод.</p>
       </article>
 
       <article class="card" id="phrasesCard">
         <header class="card-head"><h2>Фразе и идиоми</h2></header>
         <div id="phrases"></div>
-      </article>
-
-      <article class="card" id="wordsCard">
-        <header class="card-head"><h2>Речник</h2></header>
-        <p class="explain muted">Норвешке речи из превода, одабране према твом нивоу: основни облик, важни облици и значење.</p>
-        <table class="words">
-          <thead><tr><th>Norsk</th><th>Српски</th></tr></thead>
-          <tbody id="words"></tbody>
-        </table>
       </article>
 
       <article class="card" id="notesCard">
@@ -111,41 +83,6 @@
   <footer class="credits">
     <p>Аутор: Ivan S. · Epicurus001 · Srbija / Norge</p>
   </footer>
-
-  <!-- Подешавања -->
-  <dialog id="settingsDialog" class="dialog">
-    <form method="dialog" id="settingsForm">
-      <h2>Подешавања</h2>
-      <label for="apiKey">Claude API кључ</label>
-      <div class="key-row">
-        <input id="apiKey" type="password" autocomplete="off" spellcheck="false" placeholder="sk-ant-...">
-        <button type="button" id="toggleKey" class="ghost">Прикажи</button>
-      </div>
-      <p class="muted small">
-        Кључ се чува само у <code>localStorage</code> овог прегледача и шаље се
-        искључиво на <code>api.anthropic.com</code>. Кључ добијаш на
-        <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com</a>.
-      </p>
-
-      <label for="modelSelect">Модел</label>
-      <select id="modelSelect"></select>
-      <input id="customModel" type="text" placeholder="ID модела, нпр. claude-opus-5-5" hidden spellcheck="false">
-
-      <label for="themeSelect">Тема</label>
-      <select id="themeSelect">
-        <option value="auto">Аутоматски (као систем)</option>
-        <option value="light">Светла</option>
-        <option value="dark">Тамна</option>
-      </select>
-
-      <div class="dialog-actions">
-        <button type="button" id="forgetKey" class="danger ghost">Обриши кључ</button>
-        <span class="spacer"></span>
-        <button type="button" id="cancelSettings" class="ghost">Откажи</button>
-        <button value="save" id="saveSettings" class="primary">Сачувај</button>
-      </div>
-    </form>
-  </dialog>
 
   <!-- Историја -->
   <dialog id="historyDialog" class="dialog">
@@ -163,6 +100,7 @@
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
+  <script src="idioms.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
