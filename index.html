@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="sr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Преводилац српски–норвешки</title>
+  <meta name="description" content="Српско–норвешки преводилац у духу језика, са нивоима CEFR A1–C2.">
+  <meta name="theme-color" content="#1f4e79">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🗣️</text></svg>">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <h1>Преводилац <span class="sub">српски ⇄ норвешки</span></h1>
+    <div class="topbar-actions">
+      <button id="themeBtn" class="icon-btn" type="button" title="Промени тему" aria-label="Промени тему">◐</button>
+      <button id="historyBtn" class="icon-btn" type="button" title="Историја" aria-label="Историја">🕘</button>
+      <button id="settingsBtn" class="icon-btn" type="button" title="Подешавања" aria-label="Подешавања">⚙️</button>
+    </div>
+  </header>
+
+  <main class="container">
+    <div id="keyWarning" class="banner" hidden>
+      Да би превођење радило, унеси свој Claude API кључ у
+      <button type="button" class="link-btn" id="openSettingsFromBanner">подешавањима</button>.
+    </div>
+
+    <section class="card">
+      <div class="direction">
+        <span id="srcLabel" class="lang">Српски</span>
+        <button id="swapBtn" class="swap" type="button" title="Замени смер" aria-label="Замени смер">⇄</button>
+        <span id="tgtLabel" class="lang">Norsk (bokmål)</span>
+      </div>
+
+      <div class="field">
+        <span class="label">Ниво норвешког (CEFR)</span>
+        <div class="levels" id="levels" role="radiogroup" aria-label="Ниво CEFR"></div>
+        <p id="levelDesc" class="level-desc"></p>
+      </div>
+
+      <div class="field" id="scriptField" hidden>
+        <span class="label">Писмо српског превода</span>
+        <div class="seg" role="radiogroup" aria-label="Писмо">
+          <label><input type="radio" name="script" value="cyrl" checked> Ћирилица</label>
+          <label><input type="radio" name="script" value="latn"> Latinica</label>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="input" id="inputLabel">Текст на српском (ћирилица или латиница)</label>
+        <textarea id="input" rows="5" placeholder="нпр. Пала ми је секира у мед — данас сам добио посао!"></textarea>
+        <div class="row">
+          <span id="charCount" class="muted">0 / 5000</span>
+          <div class="row-actions">
+            <button id="speakInputBtn" class="ghost" type="button" hidden>🔊 Изговори</button>
+            <button id="clearBtn" class="ghost" type="button">Обриши</button>
+            <button id="translateBtn" class="primary" type="button">Преведи</button>
+          </div>
+        </div>
+        <p class="hint muted">Ctrl/⌘ + Enter за превод</p>
+      </div>
+    </section>
+
+    <div id="status" class="status" role="status" aria-live="polite"></div>
+
+    <section id="result" class="result" hidden>
+      <article class="card">
+        <header class="card-head">
+          <h2>Природан превод</h2>
+          <div class="row-actions">
+            <button class="ghost speak-btn" data-target="naturalText" type="button" hidden>🔊</button>
+            <button class="ghost copy-btn" data-target="naturalText" type="button">📋 Копирај</button>
+          </div>
+        </header>
+        <p class="explain muted">Како би то рекао изворни говорник — не реч по реч.</p>
+        <p id="naturalText" class="translation"></p>
+      </article>
+
+      <article class="card">
+        <header class="card-head">
+          <h2>Буквалан превод</h2>
+          <div class="row-actions">
+            <button class="ghost copy-btn" data-target="literalText" type="button">📋 Копирај</button>
+          </div>
+        </header>
+        <p class="explain muted">Дословно, да се види структура реченице.</p>
+        <p id="literalText" class="translation literal"></p>
+      </article>
+
+      <article class="card" id="phrasesCard">
+        <header class="card-head"><h2>Фразе и идиоми</h2></header>
+        <div id="phrases"></div>
+      </article>
+
+      <article class="card" id="notesCard">
+        <header class="card-head"><h2>Напомене о граматици и регистру</h2></header>
+        <ul id="notes" class="notes"></ul>
+      </article>
+    </section>
+  </main>
+
+  <!-- Подешавања -->
+  <dialog id="settingsDialog" class="dialog">
+    <form method="dialog" id="settingsForm">
+      <h2>Подешавања</h2>
+      <label for="apiKey">Claude API кључ</label>
+      <div class="key-row">
+        <input id="apiKey" type="password" autocomplete="off" spellcheck="false" placeholder="sk-ant-...">
+        <button type="button" id="toggleKey" class="ghost">Прикажи</button>
+      </div>
+      <p class="muted small">
+        Кључ се чува само у <code>localStorage</code> овог прегледача и шаље се
+        искључиво на <code>api.anthropic.com</code>. Кључ добијаш на
+        <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com</a>.
+      </p>
+
+      <label for="modelSelect">Модел</label>
+      <select id="modelSelect"></select>
+      <input id="customModel" type="text" placeholder="ID модела, нпр. claude-opus-5-5" hidden spellcheck="false">
+
+      <label for="themeSelect">Тема</label>
+      <select id="themeSelect">
+        <option value="auto">Аутоматски (као систем)</option>
+        <option value="light">Светла</option>
+        <option value="dark">Тамна</option>
+      </select>
+
+      <div class="dialog-actions">
+        <button type="button" id="forgetKey" class="danger ghost">Обриши кључ</button>
+        <span class="spacer"></span>
+        <button type="button" id="cancelSettings" class="ghost">Откажи</button>
+        <button value="save" id="saveSettings" class="primary">Сачувај</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Историја -->
+  <dialog id="historyDialog" class="dialog">
+    <div class="dialog-inner">
+      <h2>Историја превода</h2>
+      <ul id="historyList" class="history"></ul>
+      <p id="historyEmpty" class="muted">Још нема превода.</p>
+      <div class="dialog-actions">
+        <button type="button" id="clearHistory" class="danger ghost">Обриши историју</button>
+        <span class="spacer"></span>
+        <button type="button" id="closeHistory" class="primary">Затвори</button>
+      </div>
+    </div>
+  </dialog>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
