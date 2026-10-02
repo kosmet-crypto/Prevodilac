@@ -326,11 +326,7 @@ Direction: Norwegian Bokmål → Serbian.
 function apiErrorMessage(status, body) {
   const apiMsg = body && body.error && body.error.message ? body.error.message : "";
   switch (status) {
-    case 400:
-      if (/credit balance/i.test(apiMsg)) {
-        return "Нема довољно кредита на Anthropic налогу. Допуни га на console.anthropic.com → Billing.";
-      }
-      return `Неисправан захтев (400). ${apiMsg}`;
+    case 400: return `Неисправан захтев (400). ${apiMsg}`;
     case 401: return "API кључ није исправан (401). Провери га у подешавањима.";
     case 403: return `Приступ одбијен (403). ${apiMsg}`;
     case 404: return `Модел није пронађен (404). Изабери други модел у подешавањима. ${apiMsg}`;
