@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Two speech bubbles (Serbian text, Norwegian flag), scaled into the 66dp safe zone. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group
+        android:pivotX="54"
+        android:pivotY="57"
+        android:scaleX="0.72"
+        android:scaleY="0.72"
+        android:translateY="-3">
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M30,26h28a8,8 0,0 1,8 8v14a8,8 0,0 1,-8 8h-18l-10,10v-10a8,8 0,0 1,-8 -8v-14a8,8 0,0 1,8 -8z" />
+        <path
+            android:fillColor="#FF1F4E79"
+            android:pathData="M31.75,35h24.5a1.75,1.75 0,0 1,0 3.5h-24.5a1.75,1.75 0,0 1,0 -3.5z" />
+        <path
+            android:fillColor="#FF1F4E79"
+            android:pathData="M31.75,43h18.5a1.75,1.75 0,0 1,0 3.5h-18.5a1.75,1.75 0,0 1,0 -3.5z" />
+        <path
+            android:fillColor="#FFBA0C2F"
+            android:strokeColor="#FF1F4E79"
+            android:strokeWidth="3"
+            android:pathData="M50,48h28a8,8 0,0 1,8 8v14a8,8 0,0 1,-8 8v10l-10,-10h-18a8,8 0,0 1,-8 -8v-14a8,8 0,0 1,8 -8z" />
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M56,48h6v30h-6z M42,60h44v6h-44z" />
+        <path
+            android:fillColor="#FF00205B"
+            android:pathData="M57.5,48h3v30h-3z M42,61.5h44v3h-44z" />
+    </group>
+</vector>

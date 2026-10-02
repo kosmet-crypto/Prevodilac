@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Light theme; values-night switches to dark so the page's prefers-color-scheme follows the system. -->
+    <style name="Theme.Prevodilac" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/bg</item>
+        <item name="android:statusBarColor">@color/bar</item>
+        <item name="android:navigationBarColor">@color/bg</item>
+    </style>
+</resources>

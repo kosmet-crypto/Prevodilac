@@ -1,81 +1,539 @@
 <!doctype html>
 <html lang="sr">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Преводилац српски–норвешки</title>
-  <meta name="description" content="Бесплатан српско–норвешки преводилац са фразама, идиомима и напоменама.">
-  <meta name="theme-color" content="#1f4e79">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🗣️</text></svg>">
-  <link rel="stylesheet" href="style.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- Bridge features this page needs from the Android app (WebUpdater.NATIVE_API). Raise it when the page
+     starts calling a new PrevodilacAndroid method; older apps then keep their page until the APK is updated. -->
+<meta name="prevodilac-native-api" content="1">
+<title>Преводилац српски–норвешки</title>
+<meta name="description" content="Бесплатан српско–норвешки преводилац са идиомима, свакодневним фразама и вежбањем.">
+<meta name="theme-color" content="#1f4e79">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Преводилац">
+<style>
+:root {
+  --bg: #f4f6f9;
+  --surface: #ffffff;
+  --surface-2: #eef2f7;
+  --text: #1b2430;
+  --muted: #5d6b7c;
+  --border: #d7dee8;
+  --accent: #1f4e79;
+  --accent-text: #ffffff;
+  --accent-soft: #e3edf7;
+  --nor-red: #ba0c2f;
+  --danger: #b42318;
+  --ok: #1a7f37;
+  --shadow: 0 1px 2px rgba(16, 24, 40, .06), 0 1px 3px rgba(16, 24, 40, .08);
+  --radius: 14px;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1419;
+    --surface: #182029;
+    --surface-2: #212b36;
+    --text: #e6edf3;
+    --muted: #9aa7b4;
+    --border: #2d3a47;
+    --accent: #6aa9e9;
+    --accent-text: #0b1520;
+    --accent-soft: #1d3247;
+    --nor-red: #ff6b81;
+    --danger: #ff8a80;
+    --ok: #56d364;
+    --shadow: none;
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme="dark"] {
+  --bg: #0f1419;
+  --surface: #182029;
+  --surface-2: #212b36;
+  --text: #e6edf3;
+  --muted: #9aa7b4;
+  --border: #2d3a47;
+  --accent: #6aa9e9;
+  --accent-text: #0b1520;
+  --accent-soft: #1d3247;
+  --nor-red: #ff6b81;
+  --danger: #ff8a80;
+  --ok: #56d364;
+  --shadow: none;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", sans-serif;
+}
+
+a { color: var(--accent); }
+code { font-size: .9em; background: var(--surface-2); padding: 0 .3em; border-radius: 4px; }
+
+.sticky-top { position: sticky; top: 0; z-index: 5; }
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 16px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+.topbar h1 { font-size: 1.15rem; margin: 0; line-height: 1.2; }
+.topbar .sub { display: block; font-size: .8rem; font-weight: 500; color: var(--muted); }
+.topbar-actions { display: flex; gap: 4px; }
+
+.container {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  box-shadow: var(--shadow);
+}
+
+button, select, input, textarea { font: inherit; color: inherit; }
+
+button {
+  cursor: pointer;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  padding: 8px 14px;
+  min-height: 40px;
+}
+button:disabled { opacity: .55; cursor: not-allowed; }
+button:focus-visible, select:focus-visible, input:focus-visible, textarea:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.primary { background: var(--accent); color: var(--accent-text); border-color: var(--accent); font-weight: 600; }
+.ghost { background: transparent; }
+.danger { color: var(--danger); }
+.icon-btn { background: transparent; border: none; font-size: 1.2rem; min-width: 40px; padding: 6px; }
+
+.direction {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.lang {
+  text-align: center;
+  font-weight: 600;
+  padding: 8px;
+  border-radius: 10px;
+  background: var(--surface-2);
+}
+.swap { font-size: 1.3rem; border-radius: 50%; width: 44px; height: 44px; padding: 0; }
+
+.field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+.field:last-child { margin-bottom: 0; }
+.field > label, .label { font-weight: 600; font-size: .95rem; }
+
+
+.seg { display: flex; gap: 8px; flex-wrap: wrap; }
+.seg label {
+  display: flex; align-items: center; gap: 6px;
+  border: 1px solid var(--border); border-radius: 10px; padding: 6px 12px; cursor: pointer;
+}
+
+textarea, input[type="text"], input[type="password"], select {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  padding: 10px 12px;
+}
+textarea { resize: vertical; min-height: 110px; font-size: 1.05rem; }
+
+.row { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+.row-actions { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.muted { color: var(--muted); }
+.small { font-size: .85rem; }
+.hint { margin: 0; font-size: .8rem; }
+
+.status:empty { display: none; }
+.status {
+  border-radius: var(--radius);
+  padding: 12px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+.status.error { border-color: var(--danger); color: var(--danger); }
+.status.loading::before {
+  content: "";
+  display: inline-block;
+  width: 14px; height: 14px;
+  margin-right: 8px;
+  vertical-align: -2px;
+  border: 2px solid var(--accent);
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: spin .8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.result { display: flex; flex-direction: column; gap: 16px; }
+.card-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+.card-head h2 { font-size: 1.05rem; margin: 0; }
+.explain { margin: 4px 0 8px; font-size: .85rem; }
+.translation { margin: 0; font-size: 1.15rem; white-space: pre-wrap; overflow-wrap: anywhere; }
+
+.phrase {
+  border-left: 4px solid var(--nor-red);
+  background: var(--surface-2);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-top: 10px;
+}
+.phrase h3 { margin: 0 0 6px; font-size: 1rem; }
+.phrase dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 4px 10px; font-size: .95rem; }
+.phrase dt { color: var(--muted); }
+.phrase dd { margin: 0; overflow-wrap: anywhere; }
+.phrase .none { color: var(--danger); font-style: italic; }
+.phrase .eq { font-weight: 600; color: var(--ok); }
+.phrase p { margin: 8px 0 0; font-size: .92rem; }
+
+
+.credits {
+  max-width: 760px;
+  margin: 8px auto 24px;
+  padding: 0 16px;
+  font-size: .8rem;
+  color: var(--muted);
+  text-align: center;
+}
+.credits p { margin: 4px 0; }
+
+.subhead { font-size: .9rem; margin: 14px 0 4px; color: var(--muted); }
+.alts { margin: 0; padding-left: 20px; }
+.alts li { margin-bottom: 4px; overflow-wrap: anywhere; }
+.level-tag { margin-left: 8px; vertical-align: 1px; }
+
+.notes { margin: 8px 0 0; padding-left: 20px; }
+.notes li { margin-bottom: 8px; }
+.tag {
+  display: inline-block;
+  font-size: .75rem;
+  font-weight: 600;
+  padding: 1px 8px;
+  margin-right: 6px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.dialog {
+  width: min(560px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  padding: 20px;
+}
+.dialog::backdrop { background: rgba(0, 0, 0, .45); }
+.dialog h2 { margin-top: 0; }
+.dialog form, .dialog-inner { display: flex; flex-direction: column; gap: 8px; }
+.dialog label { font-weight: 600; margin-top: 8px; }
+.dialog-actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+.spacer { flex: 1; }
+
+.history { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; }
+.history li button {
+  width: 100%;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.history .meta { font-size: .75rem; color: var(--muted); }
+.history .src { font-weight: 600; overflow-wrap: anywhere; }
+.history .tgt { color: var(--muted); overflow-wrap: anywhere; }
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%) translateY(20px);
+  background: var(--text);
+  color: var(--bg);
+  padding: 10px 16px;
+  border-radius: 10px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .2s, transform .2s;
+  max-width: calc(100vw - 32px);
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+@media (max-width: 480px) {
+    .row .row-actions button { flex: 1; }
+  .row { flex-direction: column; align-items: stretch; }
+  .phrase dl { grid-template-columns: 1fr; }
+  .phrase dt { margin-top: 4px; }
+}
+
+/* ---------- картице (табови) ---------- */
+.tabs {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+  padding: 6px 12px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+.tabs button {
+  border: none;
+  background: transparent;
+  font-weight: 600;
+  color: var(--muted);
+  padding: 8px 4px;
+  min-height: 40px;
+}
+.tabs button[aria-selected="true"] { background: var(--accent-soft); color: var(--accent); }
+.tab-panel { display: flex; flex-direction: column; gap: 16px; }
+
+/* ---------- чипови ---------- */
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chips button { padding: 6px 12px; min-height: 36px; font-weight: 600; }
+.chips button[aria-checked="true"] { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+.level-desc {
+  margin: 0;
+  font-size: .9rem;
+  color: var(--muted);
+  background: var(--surface-2);
+  border-radius: 10px;
+  padding: 8px 12px;
+}
+.level-desc:empty { display: none; }
+.level-desc strong { color: var(--text); }
+input[type="search"] {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  padding: 10px 12px;
+}
+
+/* ---------- листе израза и фраза ---------- */
+.list { display: flex; flex-direction: column; gap: 10px; }
+.list .phrase { margin-top: 0; background: var(--surface); border: 1px solid var(--border); border-left-width: 4px; border-left-color: var(--nor-red); }
+.count { margin: 0; font-size: .85rem; }
+.phrase-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+.phrase-head h3 { flex: 1; }
+.mini { min-height: 32px; padding: 2px 8px; }
+
+.cat { padding: 0; overflow: hidden; }
+.cat summary {
+  cursor: pointer;
+  list-style: none;
+  padding: 14px 16px;
+  font-weight: 600;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.cat summary::-webkit-details-marker { display: none; }
+.cat summary::after { content: "▾"; color: var(--muted); }
+.cat[open] summary::after { content: "▴"; }
+.cat ul { list-style: none; margin: 0; padding: 0 16px 12px; }
+.cat li { border-top: 1px solid var(--border); padding: 10px 0; display: flex; gap: 8px; align-items: flex-start; }
+.cat li .txt { flex: 1; min-width: 0; }
+.cat .no { font-weight: 600; font-size: 1.05rem; overflow-wrap: anywhere; }
+.cat .sr { color: var(--muted); overflow-wrap: anywhere; }
+.cat .pnote { font-size: .85rem; margin-top: 4px; }
+.cat .n { color: var(--muted); font-weight: 500; font-size: .85rem; }
+
+/* ---------- вежбање ---------- */
+.quiz-prompt { font-size: 1.3rem; font-weight: 700; margin: 4px 0 10px; overflow-wrap: anywhere; }
+.quiz-options { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+.quiz-options button { text-align: left; padding: 12px 14px; background: var(--surface); }
+.quiz-options button.right { border-color: var(--ok); background: color-mix(in srgb, var(--ok) 15%, var(--surface)); }
+.quiz-options button.wrong { border-color: var(--danger); background: color-mix(in srgb, var(--danger) 15%, var(--surface)); }
+.quiz-feedback { margin-top: 12px; padding: 10px 12px; border-radius: 10px; background: var(--surface-2); font-size: .95rem; }
+.quiz-feedback strong { display: block; margin-bottom: 4px; }
+.quiz-actions { margin-top: 12px; }
+.quiz-actions button { min-width: 140px; }
+
+.dialog select { width: 100%; }
+
+</style>
 </head>
 <body>
+  <div class="sticky-top">
   <header class="topbar">
     <h1>Преводилац <span class="sub">српски ⇄ норвешки</span></h1>
     <div class="topbar-actions">
       <button id="themeBtn" class="icon-btn" type="button" title="Промени тему" aria-label="Промени тему">◐</button>
       <button id="historyBtn" class="icon-btn" type="button" title="Историја" aria-label="Историја">🕘</button>
+      <button id="aboutBtn" class="icon-btn" type="button" title="О апликацији" aria-label="О апликацији">ℹ️</button>
     </div>
   </header>
 
+  <nav class="tabs" role="tablist" aria-label="Делови апликације">
+    <button type="button" role="tab" data-tab="translate" aria-selected="true">Превод</button>
+    <button type="button" role="tab" data-tab="idioms" aria-selected="false">Изрази</button>
+    <button type="button" role="tab" data-tab="phrases" aria-selected="false">Фразе</button>
+    <button type="button" role="tab" data-tab="quiz" aria-selected="false">Вежбање</button>
+  </nav>
+  </div>
+
   <main class="container">
-    <section class="card">
-      <div class="direction">
-        <span id="srcLabel" class="lang">Српски</span>
-        <button id="swapBtn" class="swap" type="button" title="Замени смер" aria-label="Замени смер">⇄</button>
-        <span id="tgtLabel" class="lang">Norsk (bokmål)</span>
-      </div>
-
-      <div class="field" id="scriptField" hidden>
-        <span class="label">Писмо српског превода</span>
-        <div class="seg" role="radiogroup" aria-label="Писмо">
-          <label><input type="radio" name="script" value="cyrl" checked> Ћирилица</label>
-          <label><input type="radio" name="script" value="latn"> Latinica</label>
+    <!-- ============ Превод ============ -->
+    <section id="tab-translate" class="tab-panel" role="tabpanel">
+      <section class="card">
+        <div class="direction">
+          <span id="srcLabel" class="lang">Српски</span>
+          <button id="swapBtn" class="swap" type="button" title="Замени смер" aria-label="Замени смер">⇄</button>
+          <span id="tgtLabel" class="lang">Norsk (bokmål)</span>
         </div>
-      </div>
 
-      <div class="field">
-        <label for="input" id="inputLabel">Текст на српском (ћирилица или латиница)</label>
-        <textarea id="input" rows="5" placeholder="нпр. Пала ми је секира у мед — данас сам добио посао!"></textarea>
-        <div class="row">
-          <span id="charCount" class="muted">0 / 1000</span>
-          <div class="row-actions">
-            <button id="speakInputBtn" class="ghost" type="button" hidden>🔊 Изговори</button>
-            <button id="clearBtn" class="ghost" type="button">Обриши</button>
-            <button id="translateBtn" class="primary" type="button">Преведи</button>
+        <div class="field" id="scriptField" hidden>
+          <span class="label">Писмо српског превода</span>
+          <div class="seg" role="radiogroup" aria-label="Писмо">
+            <label><input type="radio" name="script" value="cyrl" checked> Ћирилица</label>
+            <label><input type="radio" name="script" value="latn"> Latinica</label>
           </div>
         </div>
-        <p class="hint muted">Ctrl/⌘ + Enter за превод</p>
-      </div>
+
+        <div class="field">
+          <label for="input" id="inputLabel">Текст на српском (ћирилица или латиница)</label>
+          <textarea id="input" rows="5" placeholder="нпр. Пала ми је секира у мед — данас сам добио посао!"></textarea>
+          <div class="row">
+            <span id="charCount" class="muted">0 / 1000</span>
+            <div class="row-actions">
+              <button id="speakInputBtn" class="ghost" type="button" hidden>🔊 Изговори</button>
+              <button id="clearBtn" class="ghost" type="button">Обриши</button>
+              <button id="translateBtn" class="primary" type="button">Преведи</button>
+            </div>
+          </div>
+          <p class="hint muted">Ctrl/⌘ + Enter за превод</p>
+        </div>
+      </section>
+
+      <div id="status" class="status" role="status" aria-live="polite"></div>
+
+      <section id="result" class="result" hidden>
+        <article class="card" id="translationCard">
+          <header class="card-head">
+            <h2>Превод</h2>
+            <div class="row-actions">
+              <button class="ghost speak-btn" data-target="naturalText" type="button" hidden>🔊</button>
+              <button class="ghost copy-btn" data-target="naturalText" type="button">📋 Копирај</button>
+            </div>
+          </header>
+          <p id="naturalText" class="translation"></p>
+          <div id="altWrap" hidden>
+            <h3 class="subhead">Други преводи из базе</h3>
+            <ul id="alternatives" class="alts"></ul>
+          </div>
+          <p class="explain muted">Машински превод: MyMemory. Може да буде дослован или нетачан, нарочито код идиома, па погледај и фразе испод.</p>
+        </article>
+
+        <article class="card" id="phrasesCard">
+          <header class="card-head"><h2>Фразе и идиоми</h2></header>
+          <div id="phrases"></div>
+        </article>
+
+        <article class="card" id="notesCard">
+          <header class="card-head"><h2>Напомене о граматици и регистру</h2></header>
+          <ul id="notes" class="notes"></ul>
+        </article>
+      </section>
     </section>
 
-    <div id="status" class="status" role="status" aria-live="polite"></div>
-
-    <section id="result" class="result" hidden>
-      <article class="card" id="translationCard">
-        <header class="card-head">
-          <h2>Превод</h2>
-          <div class="row-actions">
-            <button class="ghost speak-btn" data-target="naturalText" type="button" hidden>🔊</button>
-            <button class="ghost copy-btn" data-target="naturalText" type="button">📋 Копирај</button>
-          </div>
-        </header>
-        <p id="naturalText" class="translation"></p>
-        <div id="altWrap" hidden>
-          <h3 class="subhead">Други преводи из базе</h3>
-          <ul id="alternatives" class="alts"></ul>
+    <!-- ============ Изрази ============ -->
+    <section id="tab-idioms" class="tab-panel" role="tabpanel" hidden>
+      <section class="card">
+        <div class="field">
+          <label for="idiomSearch">Претрага</label>
+          <input id="idiomSearch" type="search" placeholder="нпр. среће, flaks, киша…" autocomplete="off">
         </div>
-        <p class="explain muted">Машински превод: MyMemory. Може да буде дослован или нетачан, нарочито код идиома, па погледај и фразе испод.</p>
-      </article>
+        <div class="field">
+          <span class="label">Изрази на језику</span>
+          <div class="chips" id="idiomDirChips" role="radiogroup" aria-label="Језик израза">
+            <button type="button" data-v="sr" aria-checked="true">Српски</button>
+            <button type="button" data-v="no" aria-checked="false">Норвешки</button>
+          </div>
+        </div>
+        <div class="field">
+          <span class="label">Ниво</span>
+          <div class="chips" id="idiomLevelChips" role="radiogroup" aria-label="Ниво"></div>
+          <p id="idiomLevelDesc" class="level-desc"></p>
+        </div>
+      </section>
+      <p id="idiomCount" class="muted count"></p>
+      <div id="idiomList" class="list"></div>
+    </section>
 
-      <article class="card" id="phrasesCard">
-        <header class="card-head"><h2>Фразе и идиоми</h2></header>
-        <div id="phrases"></div>
-      </article>
+    <!-- ============ Фразе ============ -->
+    <section id="tab-phrases" class="tab-panel" role="tabpanel" hidden>
+      <section class="card">
+        <div class="field">
+          <label for="phraseSearch">Претрага</label>
+          <input id="phraseSearch" type="search" placeholder="нпр. лекар, kort, кирија…" autocomplete="off">
+        </div>
+        <div class="field">
+          <span class="label">Ниво</span>
+          <div class="chips" id="phraseLevelChips" role="radiogroup" aria-label="Ниво"></div>
+        </div>
+      </section>
+      <div id="phraseList" class="list"></div>
+    </section>
 
-      <article class="card" id="notesCard">
-        <header class="card-head"><h2>Напомене о граматици и регистру</h2></header>
-        <ul id="notes" class="notes"></ul>
+    <!-- ============ Вежбање ============ -->
+    <section id="tab-quiz" class="tab-panel" role="tabpanel" hidden>
+      <section class="card">
+        <div class="field">
+          <span class="label">Шта вежбаш</span>
+          <div class="chips" id="quizSourceChips" role="radiogroup" aria-label="Шта вежбаш">
+            <button type="button" data-v="all" aria-checked="true">Све</button>
+            <button type="button" data-v="idioms" aria-checked="false">Изрази</button>
+            <button type="button" data-v="phrases" aria-checked="false">Фразе</button>
+          </div>
+        </div>
+        <div class="field">
+          <span class="label">Највиши ниво</span>
+          <div class="chips" id="quizLevelChips" role="radiogroup" aria-label="Највиши ниво"></div>
+        </div>
+        <p id="quizStats" class="muted small"></p>
+      </section>
+
+      <article class="card quiz" id="quizCard">
+        <p id="quizAsk" class="muted small"></p>
+        <p id="quizPrompt" class="quiz-prompt"></p>
+        <button id="quizSpeak" class="ghost" type="button" hidden>🔊 Изговори</button>
+        <div id="quizOptions" class="quiz-options"></div>
+        <div id="quizFeedback" class="quiz-feedback" hidden></div>
+        <div class="row-actions quiz-actions">
+          <button id="quizNext" class="primary" type="button" hidden>Следеће →</button>
+        </div>
       </article>
     </section>
   </main>
@@ -98,9 +556,1512 @@
     </div>
   </dialog>
 
+  <!-- О апликацији -->
+  <dialog id="aboutDialog" class="dialog">
+    <div class="dialog-inner">
+      <h2>О апликацији</h2>
+      <p>Преводилац српски ⇄ норвешки<br><span class="muted small">Бесплатан превод, идиоми, свакодневне фразе и вежбање.</span></p>
+      <p class="muted small">Верзија: <span id="appVersion"></span></p>
+      <label for="themeSelect">Тема</label>
+      <select id="themeSelect">
+        <option value="auto">Аутоматски (као систем)</option>
+        <option value="light">Светла</option>
+        <option value="dark">Тамна</option>
+      </select>
+      <div class="dialog-actions">
+        <button type="button" id="checkUpdates" class="ghost">Провери ажурирања</button>
+        <span class="spacer"></span>
+        <button type="button" id="closeAbout" class="primary">Затвори</button>
+      </div>
+    </div>
+  </dialog>
+
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-  <script src="idioms.js"></script>
-  <script src="app.js"></script>
+<script>
+/*
+ * Речник фраза и идиома, без интернета и без AI.
+ *
+ * dir:  "sr" — израз се тражи у српском тексту, "no" — у норвешком.
+ * re:   образац над „нормализованим“ текстом: српски у латиници, мала слова,
+ *       без квачица (č ć → c, š → s, ž → z, đ → dj); норвешки само мала слова.
+ * literal: дословно на други језик; equivalent: прави еквивалент или, ако га нема
+ *       (has: false), најприроднији опис. level: CEFR ниво израза.
+ */
+const IDIOMS = [
+  // ---------------- српски → норвешки ----------------
+  { dir: "sr", re: /sekira u med/, original: "пала ми је секира у мед", literal: "øksa har falt i honningen for meg", equivalent: "å ha flaks", has: true, level: "A2",
+    explanation: "Кад некоме изненада крене набоље. Норвежани кажу једноставно „jeg hadde flaks“ (имао сам среће) или „for en flaks!“." },
+  { dir: "sr", re: /\bnije (mi|ti|mu|joj|nam|vam|im) do\b/, original: "није ми до тога", literal: "det er ikke til meg til det", equivalent: "jeg er ikke i humør til det / jeg orker ikke", has: false, level: "B1",
+    explanation: "Норвешки нема исти израз. Кад немаш расположења: „jeg er ikke i humør til det“, кад немаш снаге: „jeg orker ikke“ („orke“ је врло честа реч)." },
+  { dir: "sr", re: /na zivce/, original: "ићи (некоме) на живце", literal: "å gå noen på nervene", equivalent: "å gå noen på nervene", has: true, level: "A2",
+    explanation: "Исти израз постоји и у норвешком: „Han går meg på nervene.“" },
+  { dir: "sr", re: /ni luk jeo/, original: "ни лук јео ни лук мирисао", literal: "verken spist løk eller luktet løk", equivalent: "å late som ingenting", has: true, level: "B2",
+    explanation: "Кад се неко прави невешт. „Han lot som ingenting“ — правио се као да ништа није било." },
+  { dir: "sr", re: /grom iz vedr/, original: "као гром из ведра неба", literal: "som torden fra klar himmel", equivalent: "som lyn fra klar himmel", has: true, level: "B1",
+    explanation: "Скоро исто, само је у норвешком муња (lyn), а не гром." },
+  { dir: "sr", re: /zec lez|je (taj )?zec\b/, original: "ту је зец", literal: "der ligger haren", equivalent: "det er der skoen trykker", has: true, level: "B2",
+    explanation: "Кад откријеш прави проблем. Норвешки: „ту жуља ципела“." },
+  { dir: "sr", re: /(pare|para|novac|novca|novce) kroz prozor/, original: "бацати паре кроз прозор", literal: "å kaste penger gjennom vinduet", equivalent: "å kaste penger ut av vinduet", has: true, level: "B1",
+    explanation: "Исти израз: трошити новац узалуд." },
+  { dir: "sr", re: /na vrbi rodi/, original: "кад на врби роди грожђе", literal: "når det vokser druer på pilen", equivalent: "når det blir to torsdager i en uke", has: true, level: "B2",
+    explanation: "За нешто што се никад неће десити. Норвешки: „кад у недељи буду два четвртка“." },
+  { dir: "sr", re: /palceve/, original: "држати палчеве", literal: "å holde tomlene", equivalent: "å holde tommelen for noen", has: true, level: "A2",
+    explanation: "„Jeg holder tommelen for deg!“ У норвешком се држи један палац (tommelen), а не оба." },
+  { dir: "sr", re: /(lupa|razbija)\w* (sebi )?glavu/, original: "лупати (разбијати) главу", literal: "å slå hodet", equivalent: "å legge hodet i bløt", has: true, level: "C1",
+    explanation: "Кад дуго размишљаш о проблему. Норвешки: „ставити главу да се размекша у води“." },
+  { dir: "sr", re: /nema\w? pojma/, original: "немам појма", literal: "jeg har ikke begrep", equivalent: "jeg aner ikke / ingen anelse", has: true, level: "A2",
+    explanation: "Најчешће „Jeg aner ikke“ или кратко „Aner ikke“." },
+  { dir: "sr", re: /\bbez veze\b/, original: "без везе", literal: "uten forbindelse", equivalent: "så teit! / det gir ingen mening", has: false, level: "B1",
+    explanation: "Нема истог израза. За нешто глупо: „så teit!“, за нешто бесмислено: „det gir ingen mening“." },
+  { dir: "sr", re: /kao iz kabla/, original: "пада киша као из кабла", literal: "det regner som fra en bøtte", equivalent: "det regner trollkjerringer / det øser ned", has: true, level: "B2",
+    explanation: "„Trollkjerringer“ су вештице: киша пада као да падају вештице. Свакодневније: „det øser ned“." },
+  { dir: "sr", re: /macji kasalj/, original: "мачји кашаљ", literal: "katteshoste", equivalent: "en smal sak / barnemat", has: true, level: "B2",
+    explanation: "За нешто лако: „Det er en smal sak“ или „det er barnemat“ (дечја храна)." },
+  { dir: "sr", re: /dve muve/, original: "убити две муве једним ударцем", literal: "å drepe to fluer med ett slag", equivalent: "å slå to fluer i én smekk", has: true, level: "B1",
+    explanation: "Исти израз, скоро од речи до речи." },
+  { dir: "sr", re: /rano rani/, original: "ко рано рани, две среће граби", literal: "den som står tidlig opp, griper to lykker", equivalent: "morgenstund har gull i munn", has: true, level: "B2",
+    explanation: "Норвешка пословица: „јутро има злато у устима“." },
+  { dir: "sr", re: /vrabac u ruci/, original: "боље врабац у руци него голуб на грани", literal: "bedre en spurv i hånden enn en due på grenen", equivalent: "bedre med én fugl i hånden enn ti på taket", has: true, level: "B2",
+    explanation: "Иста мисао: „боље једна птица у руци него десет на крову“." },
+  { dir: "sr", re: /(gura|zabada|tura)\w* nos u/, original: "гурати нос у туђе ствари", literal: "å dytte nesen i fremmede ting", equivalent: "å stikke nesen sin i andres saker", has: true, level: "B1",
+    explanation: "Скоро исти израз." },
+  { dir: "sr", re: /glavu u pesak/, original: "забити главу у песак", literal: "å stikke hodet i sanden", equivalent: "å stikke hodet i sanden", has: true, level: "B1",
+    explanation: "Исти израз." },
+  { dir: "sr", re: /leptiric/, original: "лептирићи у стомаку", literal: "små sommerfugler i magen", equivalent: "å ha sommerfugler i magen", has: true, level: "B1",
+    explanation: "Исти израз: „Jeg har sommerfugler i magen.“" },
+  { dir: "sr", re: /\bsve pet\b/, original: "све пет", literal: "alt fem", equivalent: "alt i orden / helt topp", has: false, level: "A2",
+    explanation: "Израз долази од школске оцене 5. Норвешки нема исту слику: „alt er i orden“ или „helt topp!“." },
+  { dir: "sr", re: /(pao|pala|pali) (s|sa) marsa/, original: "као да је пао с Марса", literal: "som om han falt fra Mars", equivalent: "å være helt på jordet", has: true, level: "C1",
+    explanation: "За некога ко појма нема шта се дешава. „Han er helt på jordet“, дословно „потпуно је на њиви“." },
+  { dir: "sr", re: /sedmom nebu/, original: "бити на седмом небу", literal: "å være på den sjuende himmelen", equivalent: "å være i den sjuende himmel", has: true, level: "B1",
+    explanation: "Исти израз." },
+  { dir: "sr", re: /prod\w* maglu/, original: "продавати маглу", literal: "å selge tåke", equivalent: "å love gull og grønne skoger / å lure folk", has: false, level: "C1",
+    explanation: "Нема тачног еквивалента. Ако неко обећава немогуће: „å love gull og grønne skoger“, ако вара: „å lure folk“." },
+  { dir: "sr", re: /ne lezi vraze/, original: "не лези враже", literal: "ikke legg deg, djevel", equivalent: "men så skjedde det likevel", has: false, level: "C1",
+    explanation: "Нема норвешког израза. Најприродније: „men så skjedde det likevel“ (али онда се ипак десило)." },
+  { dir: "sr", re: /od ruke/, original: "иде ми од руке", literal: "det går meg fra hånden", equivalent: "å ha teken på (noe)", has: true, level: "C1",
+    explanation: "„Hun har teken på det“: има дар за то." },
+  { dir: "sr", re: /baci\w* oko/, original: "бацити око", literal: "å kaste et øye", equivalent: "å ta en titt på / å kaste et blikk på", has: true, level: "B1",
+    explanation: "Свакодневно: „Kan du ta en titt på dette?“" },
+  { dir: "sr", re: /bubreg u loju/, original: "живети као бубрег у лоју", literal: "å leve som en nyre i talg", equivalent: "å leve som plommen i egget", has: true, level: "C1",
+    explanation: "Норвешки: живети „као жуманце у јајету“." },
+  { dir: "sr", re: /svaka cast/, original: "свака част", literal: "all ære", equivalent: "hatten av! / godt jobba!", has: true, level: "A2",
+    explanation: "За похвалу: „Hatten av for deg!“ или свакодневно „Godt jobba!“." },
+  { dir: "sr", re: /\bnema veze\b/, original: "нема везе", literal: "det er ingen forbindelse", equivalent: "det gjør ingenting / det går fint", has: true, level: "A2",
+    explanation: "Кад нешто није важно: „Det gjør ingenting.“" },
+  { dir: "sr", re: /hvala bogu/, original: "хвала Богу", literal: "takk Gud", equivalent: "takk og lov / heldigvis", has: true, level: "A2",
+    explanation: "„Takk og lov!“ или краће „heldigvis“ (срећом)." },
+  { dir: "sr", re: /od smeha/, original: "умрети (пући) од смеха", literal: "å dø av latter", equivalent: "å le seg i hjel", has: true, level: "B1",
+    explanation: "„Jeg lo meg i hjel“: умро сам од смеха." },
+  { dir: "sr", re: /kao po loju/, original: "ићи као по лоју", literal: "å gå som på talg", equivalent: "å gå som smurt", has: true, level: "B1",
+    explanation: "„Det gikk som smurt“: ишло је као подмазано." },
+  { dir: "sr", re: /u isti kos/, original: "трпати све у исти кош", literal: "å putte alt i samme kurv", equivalent: "å skjære alle over én kam", has: true, level: "C1",
+    explanation: "Норвешки: „сећи све преко истог чешља“." },
+  { dir: "sr", re: /prste u/, original: "имати прсте у нечему", literal: "å ha fingrene i noe", equivalent: "å ha en finger med i spillet", has: true, level: "C1",
+    explanation: "Норвешки: „имати прст у игри“." },
+  { dir: "sr", re: /kratkih rukava/, original: "остати кратких рукава", literal: "å bli igjen med korte ermer", equivalent: "å stå med skjegget i postkassen", has: true, level: "C1",
+    explanation: "„Стајати са брадом у поштанском сандучету“: остати празних руку и посрамљен." },
+  { dir: "sr", re: /nema frke/, original: "нема фрке", literal: "det er ingen panikk", equivalent: "ingen ko på isen", has: true, level: "B2",
+    explanation: "„Нема краве на леду“: нема разлога за бригу." },
+  { dir: "sr", re: /zagri\w* vise/, original: "загристи више него што може да прогута", literal: "å bite mer enn man kan svelge", equivalent: "å ta seg vann over hodet", has: true, level: "C1",
+    explanation: "Норвешки: „узети себи воду преко главе“." },
+  { dir: "sr", re: /\bni govora\b/, original: "ни говора", literal: "ikke tale om", equivalent: "ikke snakk om!", has: true, level: "B1",
+    explanation: "Одлучно одбијање: „Ikke snakk om!“" },
+  { dir: "sr", re: /\bizvoli\w*/, original: "изволи(те)", literal: "vær så god", equivalent: "værsågod", has: true, level: "A1",
+    explanation: "„Værsågod“ кад нешто пружаш или нудиш, и као позив за сто." },
+
+  // ---------------- норвешки → српски ----------------
+  { dir: "no", re: /regner trollkjerringer/, original: "det regner trollkjerringer", literal: "пада киша вештица", equivalent: "пада киша као из кабла", has: true, level: "B2",
+    explanation: "Врло јака киша." },
+  { dir: "no", re: /\bflaks\b/, original: "å ha flaks", literal: "имати флакс", equivalent: "имати среће / пала ми је секира у мед", has: true, level: "A2",
+    explanation: "„Flaks“ значи срећа (случајна). „For en flaks!“: каква срећа!" },
+  { dir: "no", re: /min kopp te/, original: "det er ikke min kopp te", literal: "то није моја шоља чаја", equivalent: "није по мом укусу", has: true, level: "B1",
+    explanation: "Преузето из енглеског; значи да ти се нешто не допада." },
+  { dir: "no", re: /som smurt/, original: "å gå som smurt", literal: "ићи као подмазано", equivalent: "ићи као по лоју", has: true, level: "B1",
+    explanation: "Кад све иде без проблема." },
+  { dir: "no", re: /morgenstund/, original: "morgenstund har gull i munn", literal: "јутарњи час има злато у устима", equivalent: "ко рано рани, две среће граби", has: true, level: "B2",
+    explanation: "Пословица о раном устајању." },
+  { dir: "no", re: /to torsdager/, original: "når det blir to torsdager i en uke", literal: "кад буду два четвртка у недељи", equivalent: "кад на врби роди грожђе", has: true, level: "B2",
+    explanation: "Никад." },
+  { dir: "no", re: /to fluer/, original: "å slå to fluer i én smekk", literal: "ударити две муве једним пљеском", equivalent: "убити две муве једним ударцем", has: true, level: "B1",
+    explanation: "Исти израз." },
+  { dir: "no", re: /tommelen/, original: "å holde tommelen (for noen)", literal: "држати палац (за некога)", equivalent: "држати палчеве", has: true, level: "A2",
+    explanation: "„Jeg holder tommelen for deg!“" },
+  { dir: "no", re: /på jordet/, original: "å være helt på jordet", literal: "бити потпуно на њиви", equivalent: "немати појма / као да је пао с Марса", has: true, level: "C1",
+    explanation: "Кад неко уопште не разуме шта се дешава." },
+  { dir: "no", re: /skoen trykker/, original: "det er der skoen trykker", literal: "ту ципела жуља", equivalent: "ту је зец", has: true, level: "B2",
+    explanation: "Ту је прави проблем." },
+  { dir: "no", re: /ikke snakk om/, original: "ikke snakk om!", literal: "не причај о (томе)!", equivalent: "ни говора!", has: true, level: "B1",
+    explanation: "Одлучно одбијање." },
+  { dir: "no", re: /vann over hodet/, original: "å ta seg vann over hodet", literal: "узети себи воду преко главе", equivalent: "загристи више него што може да прогута", has: true, level: "C1",
+    explanation: "Прихватити посао који је претежак." },
+  { dir: "no", re: /over (én|en|ein) kam/, original: "å skjære alle over én kam", literal: "сећи све преко једног чешља", equivalent: "трпати све у исти кош", has: true, level: "C1",
+    explanation: "Генерализовати, не правити разлику." },
+  { dir: "no", re: /finger med i spillet/, original: "å ha en finger med i spillet", literal: "имати прст у игри", equivalent: "имати прсте у нечему", has: true, level: "C1",
+    explanation: "Бити умешан у нешто." },
+  { dir: "no", re: /fra levra/, original: "å snakke rett fra levra", literal: "причати право из јетре", equivalent: "без длаке на језику", has: true, level: "C1",
+    explanation: "Рећи отворено шта мислиш." },
+  { dir: "no", re: /skjegget i postkassen/, original: "å stå med skjegget i postkassen", literal: "стајати са брадом у поштанском сандучету", equivalent: "остати кратких рукава", has: true, level: "C1",
+    explanation: "Остати празних руку, посрамљен." },
+  { dir: "no", re: /ko på isen/, original: "ingen ko på isen", literal: "нема краве на леду", equivalent: "нема фрке", has: true, level: "B2",
+    explanation: "Нема разлога за бригу." },
+  { dir: "no", re: /smørøyet/, original: "å sitte midt i smørøyet", literal: "седети усред ока од маслаца", equivalent: "бити на најбољем месту", has: false, level: "C1",
+    explanation: "„Smørøye“ је рупица растопљеног маслаца у каши, најбољи део. Значи бити на најбољем месту у право време." },
+  { dir: "no", re: /\bkoselig\b|\bkos\b/, original: "koselig / kos", literal: "пријатно, удобно", equivalent: "пријатно, топло, ушушкано", has: false, level: "A2",
+    explanation: "Једна од најважнијих норвешких речи: осећај топлине и уживања у друштву или код куће (свеће, ћебе, кафа). Нема једне српске речи." },
+  { dir: "no", re: /dugnad/, original: "dugnad", literal: "дугнад", equivalent: "заједнички добровољни рад (радна акција)", has: false, level: "B1",
+    explanation: "Норвешки обичај: комшије или родитељи заједно, без плате, уређују двориште, школу или клуб." },
+  { dir: "no", re: /takk for sist/, original: "takk for sist", literal: "хвала за прошли пут", equivalent: "лепо што се опет видимо", has: false, level: "B1",
+    explanation: "Поздрав кад сретнеш некога с ким си се последњи пут дружио: захваљујеш се за то дружење. У српском нема таквог поздрава." },
+  { dir: "no", re: /takk for maten/, original: "takk for maten", literal: "хвала за храну", equivalent: "хвала на ручку (вечери)", has: false, level: "A1",
+    explanation: "Каже се после сваког оброка, а домаћин одговара „vel bekomme“. У Србији се обично каже „пријатно“ пре јела." },
+  { dir: "no", re: /pålegg/, original: "pålegg", literal: "оно што се ставља на", equivalent: "све што се ставља на хлеб (сир, шунка, паштета…)", has: false, level: "A2",
+    explanation: "Једна реч за све што иде на хлеб. У српском нема збирне речи." },
+  { dir: "no", re: /(sjuende|syvende) himmel/, original: "å være i den sjuende himmel", literal: "бити у седмом небу", equivalent: "бити на седмом небу", has: true, level: "B1",
+    explanation: "Исти израз." },
+  { dir: "no", re: /lyn fra klar himmel/, original: "som lyn fra klar himmel", literal: "као муња из ведрог неба", equivalent: "као гром из ведра неба", has: true, level: "B1",
+    explanation: "Изненада, неочекивано." },
+  { dir: "no", re: /på nervene/, original: "å gå noen på nervene", literal: "ићи некоме на живце", equivalent: "ићи некоме на живце", has: true, level: "A2",
+    explanation: "Исти израз." },
+  { dir: "no", re: /\borke[rt]?\b/, original: "orke", literal: "имати снаге (воље)", equivalent: "није ми до тога / немам снаге", has: false, level: "A2",
+    explanation: "„Jeg orker ikke“: немам снаге или воље. Врло честа реч без тачне српске замене." },
+  { dir: "no", re: /aner ikke/, original: "jeg aner ikke", literal: "ја не слутим", equivalent: "немам појма", has: true, level: "A2",
+    explanation: "Најчешћи начин да се каже „не знам“." },
+  { dir: "no", re: /hatten av/, original: "hatten av!", literal: "шешир доле!", equivalent: "свака част!", has: true, level: "B1",
+    explanation: "Похвала, дивљење." },
+  { dir: "no", re: /værsågod|vær så god/, original: "værsågod", literal: "буди тако добар", equivalent: "изволи(те)", has: true, level: "A1",
+    explanation: "Кад нешто пружаш или нудиш, и као позив за сто." },
+  // ---------------- српски → норвешки (допуна) ----------------
+  { dir: "sr", re: /na pamet/, original: "(не) пада ми на памет", literal: "det faller (ikke) meg på hukommelsen", equivalent: "det faller meg (ikke) inn", has: true, level: "B1",
+    explanation: "„Det falt meg inn at …“ = пало ми је на памет. „Det faller meg ikke inn!“ = не пада ми на памет (одлучно одбијање)." },
+  { dir: "sr", re: /riba u vodi/, original: "као риба у води", literal: "som en fisk i vann", equivalent: "som fisken i vannet", has: true, level: "B1",
+    explanation: "Исти израз: осећати се потпуно опуштено." },
+  { dir: "sr", re: /cut\w* kao riba/, original: "ћутати као риба", literal: "å tie som en fisk", equivalent: "å tie som graven", has: true, level: "B2",
+    explanation: "Норвешки: „ћутати као гроб“." },
+  { dir: "sr", re: /spav\w* kao (beba|zaklan|top|klada|mrtav)/, original: "спавати као заклан (као беба)", literal: "å sove som en slaktet / som en baby", equivalent: "å sove som en stein", has: true, level: "B1",
+    explanation: "Норвешки: „спавати као камен“." },
+  { dir: "sr", re: /kao vuk/, original: "гладан као вук", literal: "sulten som en ulv", equivalent: "sulten som en ulv", has: true, level: "A2",
+    explanation: "Исти израз." },
+  { dir: "sr", re: /kao dren/, original: "здрав као дрен", literal: "frisk som kornell", equivalent: "frisk som en fisk", has: true, level: "B1",
+    explanation: "Норвешки: „здрав као риба“." },
+  { dir: "sr", re: /kao pero/, original: "лак као перо", literal: "lett som en fjær", equivalent: "lett som en fjær", has: true, level: "A2",
+    explanation: "Исти израз." },
+  { dir: "sr", re: /jasno kao dan/, original: "јасно као дан", literal: "klart som dagen", equivalent: "klart som dagen", has: true, level: "B1",
+    explanation: "Исти израз." },
+  { dir: "sr", re: /prav\w* (se )?(lud|glup)/, original: "правити се луд (глуп)", literal: "å late seg gal", equivalent: "å spille dum", has: true, level: "B1",
+    explanation: "„Ikke spill dum!“ = не прави се луд!" },
+  { dir: "sr", re: /od komarca/, original: "правити од комарца магарца", literal: "å lage et esel av en mygg", equivalent: "å gjøre en mygg til en elefant", has: true, level: "B2",
+    explanation: "Норвешки: „од комарца слона“." },
+  { dir: "sr", re: /macka u dzaku/, original: "купити мачка у џаку", literal: "å kjøpe katten i sekken", equivalent: "å kjøpe katta i sekken", has: true, level: "B2",
+    explanation: "Исти израз." },
+  { dir: "sr", re: /sabere i oduzme|na kraju krajeva/, original: "на крају крајева / кад се све сабере и одузме", literal: "på slutten av sluttene", equivalent: "til syvende og sist / når alt kommer til alt", has: true, level: "B2",
+    explanation: "„Til syvende og sist“ дословно „до седмог и последњег“." },
+  { dir: "sr", re: /jamu kopa/, original: "ко другоме јаму копа, сам у њу пада", literal: "den som graver en grop for en annen, faller selv i den", equivalent: "den som graver en grav for andre, faller selv i den", has: true, level: "C1",
+    explanation: "Иста пословица." },
+  { dir: "sr", re: /bolje ikad/, original: "боље икад него никад", literal: "bedre noen gang enn aldri", equivalent: "bedre sent enn aldri", has: true, level: "A2",
+    explanation: "Норвешки: „боље касно него никад“." },
+  { dir: "sr", re: /sve u svoje vreme/, original: "све у своје време", literal: "alt i sin tid", equivalent: "alt til sin tid", has: true, level: "B1",
+    explanation: "Скоро исто." },
+  { dir: "sr", re: /dima bez vatre/, original: "нема дима без ватре", literal: "det er ingen røyk uten ild", equivalent: "ingen røyk uten ild", has: true, level: "B1",
+    explanation: "Иста пословица." },
+  { dir: "sr", re: /ima volje/, original: "где има воље, има и начина", literal: "der det er vilje, er det måte", equivalent: "der det er vilje, er det vei", has: true, level: "B2",
+    explanation: "Норвешки: „где има воље, има и пута“." },
+  { dir: "sr", re: /korpu/, original: "добити (дати) корпу", literal: "å få (gi) en kurv", equivalent: "å få (gi) kurven", has: true, level: "B2",
+    explanation: "Исти израз: бити одбијен у љубави." },
+  { dir: "sr", re: /puter\w* na glavi/, original: "имати путер на глави", literal: "å ha smør på hodet", equivalent: "å ha smør på hodet", has: true, level: "C1",
+    explanation: "Исти израз: имати нечисту савест." },
+  { dir: "sr", re: /brda i doline/, original: "обећавати брда и долине", literal: "å love fjell og daler", equivalent: "å love gull og grønne skoger", has: true, level: "C1",
+    explanation: "Норвешки: „обећавати злато и зелене шуме“." },
+  { dir: "sr", re: /vreme je novac/, original: "време је новац", literal: "tid er penger", equivalent: "tid er penger", has: true, level: "A2",
+    explanation: "Исти израз." },
+  { dir: "sr", re: /deblji kraj/, original: "извући дебљи крај", literal: "å trekke den tykkere enden", equivalent: "å trekke det korteste strået", has: true, level: "B2",
+    explanation: "Норвешки: „извући најкраћу сламку“." },
+  { dir: "sr", re: /u cetiri oka/, original: "у четири ока", literal: "i fire øyne", equivalent: "under fire øyne", has: true, level: "B2",
+    explanation: "Разговор насамо." },
+  { dir: "sr", re: /na prvi pogled/, original: "на први поглед", literal: "ved første blikk", equivalent: "ved første øyekast", has: true, level: "B1",
+    explanation: "„Kjærlighet ved første blikk“ = љубав на први поглед." },
+  { dir: "sr", re: /s vremena na vreme/, original: "с времена на време", literal: "fra tid til tid", equivalent: "fra tid til annen", has: true, level: "B1",
+    explanation: "Повремено." },
+  { dir: "sr", re: /muva bez glave/, original: "као мува без главе", literal: "som en flue uten hode", equivalent: "som en hodeløs høne", has: true, level: "B2",
+    explanation: "Норвешки: „као кокошка без главе“." },
+  { dir: "sr", re: /glavom bez obzira/, original: "главом без обзира", literal: "med hodet uten hensyn", equivalent: "hals over hode", has: true, level: "C1",
+    explanation: "У великој журби. Норвешки: „врат преко главе“." },
+  { dir: "sr", re: /sa rezervom/, original: "узети са резервом", literal: "å ta med reserve", equivalent: "å ta det med en klype salt", has: true, level: "B2",
+    explanation: "Норвешки: „са прстохватом соли“." },
+  { dir: "sr", re: /(otvori|otvoren)\w* karte/, original: "отворити карте", literal: "å åpne kortene", equivalent: "å legge kortene på bordet", has: true, level: "B2",
+    explanation: "Норвешки: „ставити карте на сто“." },
+  { dir: "sr", re: /\bdosta mi je\b/, original: "доста ми је (тога)", literal: "det er nok for meg", equivalent: "jeg er lei (av det)", has: true, level: "A2",
+    explanation: "„Lei“ = сит, преко главе: „Jeg er lei av regnet.“" },
+  { dir: "sr", re: /\bbice (sve )?(u redu|dobro)\b/, original: "биће све у реду", literal: "det blir alt i orden", equivalent: "det ordner seg", has: true, level: "A2",
+    explanation: "„Det ordner seg“ = средиће се. Врло честа утеха." },
+
+  // ---------------- норвешки → српски (допуна) ----------------
+  { dir: "no", re: /faller meg (ikke )?inn|falt meg inn/, original: "det faller meg (ikke) inn", literal: "пада ми (не) унутра", equivalent: "(не) пада ми на памет", has: true, level: "B1",
+    explanation: "Исто значење." },
+  { dir: "no", re: /fisken i vannet/, original: "som fisken i vannet", literal: "као риба у води", equivalent: "као риба у води", has: true, level: "B1",
+    explanation: "Исти израз." },
+  { dir: "no", re: /frisk som en fisk/, original: "frisk som en fisk", literal: "здрав као риба", equivalent: "здрав као дрен", has: true, level: "B1",
+    explanation: "Потпуно здрав." },
+  { dir: "no", re: /katta i sekken|katten i sekken/, original: "å kjøpe katta i sekken", literal: "купити мачку у џаку", equivalent: "купити мачка у џаку", has: true, level: "B2",
+    explanation: "Исти израз." },
+  { dir: "no", re: /mygg til en elefant/, original: "å gjøre en mygg til en elefant", literal: "направити од комарца слона", equivalent: "правити од комарца магарца", has: true, level: "B2",
+    explanation: "Претеривати." },
+  { dir: "no", re: /sent enn aldri/, original: "bedre sent enn aldri", literal: "боље касно него никад", equivalent: "боље икад него никад", has: true, level: "A2",
+    explanation: "Иста мисао." },
+  { dir: "no", re: /røyk uten ild/, original: "ingen røyk uten ild", literal: "нема дима без ватре", equivalent: "нема дима без ватре", has: true, level: "B1",
+    explanation: "Иста пословица." },
+  { dir: "no", re: /kurven/, original: "å få kurven", literal: "добити корпу", equivalent: "добити корпу", has: true, level: "B2",
+    explanation: "Исти израз: бити одбијен." },
+  { dir: "no", re: /smør på hodet/, original: "å ha smør på hodet", literal: "имати маслац на глави", equivalent: "имати путер на глави", has: true, level: "C1",
+    explanation: "Имати нечисту савест." },
+  { dir: "no", re: /syvende og sist|sjuende og sist/, original: "til syvende og sist", literal: "до седмог и последњег", equivalent: "на крају крајева", has: true, level: "B2",
+    explanation: "Кад се све узме у обзир." },
+  { dir: "no", re: /under fire øyne/, original: "under fire øyne", literal: "под четири ока", equivalent: "у четири ока", has: true, level: "B2",
+    explanation: "Насамо." },
+  { dir: "no", re: /korteste strået/, original: "å trekke det korteste strået", literal: "извући најкраћу сламку", equivalent: "извући дебљи крај", has: true, level: "B2",
+    explanation: "Проћи горе од других." },
+  { dir: "no", re: /som en stein/, original: "å sove som en stein", literal: "спавати као камен", equivalent: "спавати као заклан", has: true, level: "B1",
+    explanation: "Спавати дубоко." },
+  { dir: "no", re: /hals over hode/, original: "hals over hode", literal: "врат преко главе", equivalent: "главом без обзира", has: true, level: "C1",
+    explanation: "У великој журби." },
+  { dir: "no", re: /klype salt/, original: "å ta det med en klype salt", literal: "узети то са прстохватом соли", equivalent: "узети са резервом", has: true, level: "B2",
+    explanation: "Не веровати сасвим." },
+  { dir: "no", re: /kortene på bordet/, original: "å legge kortene på bordet", literal: "ставити карте на сто", equivalent: "отворити карте", has: true, level: "B2",
+    explanation: "Рећи искрено шта мислиш или намераваш." },
+  { dir: "no", re: /\blei\b/, original: "å være lei (av)", literal: "бити сит (нечега)", equivalent: "доста ми је (тога)", has: true, level: "A2",
+    explanation: "„Jeg er lei av det“ = доста ми је тога. „Jeg er lei meg“ = жао ми је, тужан сам." },
+  { dir: "no", re: /glad i/, original: "å være glad i", literal: "бити срећан у", equivalent: "волети (некога, нешто)", has: false, level: "A2",
+    explanation: "„Jeg er glad i deg“ = волим те (топло, за породицу и пријатеље). „Jeg elsker deg“ је јаче, романтично. „Glad i“ се каже и за храну: „Jeg er glad i kaffe.“" },
+  { dir: "no", re: /janteloven/, original: "Janteloven", literal: "Јантеов закон", equivalent: "неписано правило скромности", has: false, level: "C1",
+    explanation: "Неписано скандинавско правило: не истичи се, не мисли да си бољи од других. Кључ за разумевање норвешке скромности." },
+  { dir: "no", re: /matpakke/, original: "matpakke", literal: "пакет хране", equivalent: "ужина од куће (сендвичи)", has: false, level: "A2",
+    explanation: "Сендвичи умотани у папир које Норвежани носе на посао, у школу и на излет." },
+  { dir: "no", re: /\bhytt/, original: "hytte / hyttetur", literal: "колиба / излет до колибе", equivalent: "викендица (у планини или на мору)", has: false, level: "A2",
+    explanation: "Одлазак на „hytta“ викендом и за празнике је важан део норвешког живота." },
+  { dir: "no", re: /friluftsliv/, original: "friluftsliv", literal: "живот на отвореном", equivalent: "боравак и рекреација у природи", has: false, level: "B1",
+    explanation: "Норвешки начин живота: шетње, планинарење, скијање и логоровање у природи, у свако доба године." },
+  { dir: "no", re: /ordner seg/, original: "det ordner seg", literal: "то се среди", equivalent: "биће све у реду", has: true, level: "A2",
+    explanation: "Честа утеха." },
+  { dir: "no", re: /\bkjempe/, original: "kjempe- (kjempebra, kjempefint)", literal: "џин-", equivalent: "супер-, баш (супер добро)", has: true, level: "A2",
+    explanation: "Префикс за појачање: „kjempebra“ = супер, „kjempestor“ = огроман." },
+  { dir: "no", re: /\bha det\b/, original: "ha det (bra)!", literal: "имај то (добро)!", equivalent: "ћао! / довиђења!", has: true, level: "A1",
+    explanation: "Најчешћи поздрав при растанку." },
+];
+
+</script>
+<script>
+/*
+ * Фразе за свакодневицу, по ситуацијама.
+ * sr: српски (ћирилица), no: норвешки (bokmål), level: CEFR, note: кратко објашњење (није обавезно).
+ */
+const PHRASE_CATS = [
+  { id: "greet", icon: "👋", name: "Поздрави и учтивост" },
+  { id: "talk", icon: "💬", name: "Упознавање и дружење" },
+  { id: "shop", icon: "🛒", name: "Продавница" },
+  { id: "food", icon: "☕", name: "Ресторан и кафић" },
+  { id: "doctor", icon: "🩺", name: "Лекар и апотека" },
+  { id: "work", icon: "💼", name: "Посао" },
+  { id: "office", icon: "🏛️", name: "NAV и институције" },
+  { id: "home", icon: "🏠", name: "Стан и станодавац" },
+  { id: "travel", icon: "🚌", name: "Превоз" },
+  { id: "sos", icon: "🚨", name: "Хитни случајеви" },
+];
+
+const PHRASES = [
+  // Поздрави и учтивост
+  { cat: "greet", sr: "Здраво! / Ћао!", no: "Hei!", level: "A1" },
+  { cat: "greet", sr: "Добро јутро!", no: "God morgen!", level: "A1" },
+  { cat: "greet", sr: "Добар дан!", no: "God dag!", level: "A1", note: "„God dag“ је формално; свакодневно се каже само „Hei“." },
+  { cat: "greet", sr: "Довиђења! / Ћао!", no: "Ha det (bra)!", level: "A1" },
+  { cat: "greet", sr: "Како си?", no: "Hvordan har du det?", level: "A1" },
+  { cat: "greet", sr: "Добро сам, хвала. А ти?", no: "Jeg har det bra, takk. Og du?", level: "A1" },
+  { cat: "greet", sr: "Хвала! / Хвала пуно!", no: "Takk! / Tusen takk!", level: "A1", note: "„Tusen takk“ = хиљаду хвала." },
+  { cat: "greet", sr: "Нема на чему.", no: "Bare hyggelig! / Ingen årsak.", level: "A1", note: "Одговор на „takk“." },
+  { cat: "greet", sr: "Извините!", no: "Unnskyld!", level: "A1" },
+  { cat: "greet", sr: "Не разумем.", no: "Jeg forstår ikke.", level: "A1" },
+  { cat: "greet", sr: "Можете ли да поновите, молим вас?", no: "Kan du gjenta det, er du snill?", level: "A2", note: "Норвежани кажу „du“ и непознатима." },
+  { cat: "greet", sr: "Можете ли да говорите мало спорије?", no: "Kan du snakke litt saktere?", level: "A2" },
+  { cat: "greet", sr: "Говорите ли енглески?", no: "Snakker du engelsk?", level: "A1" },
+  { cat: "greet", sr: "Хвала на храни (после јела).", no: "Takk for maten!", level: "A1", note: "Домаћин одговара „Vel bekomme!“." },
+
+  // Упознавање и дружење
+  { cat: "talk", sr: "Како се зовеш?", no: "Hva heter du?", level: "A1" },
+  { cat: "talk", sr: "Зовем се …", no: "Jeg heter …", level: "A1" },
+  { cat: "talk", sr: "Ја сам из Србије.", no: "Jeg kommer fra Serbia.", level: "A1" },
+  { cat: "talk", sr: "Учим норвешки.", no: "Jeg lærer norsk.", level: "A1" },
+  { cat: "talk", sr: "Чиме се бавиш?", no: "Hva jobber du med?", level: "A2" },
+  { cat: "talk", sr: "Хоћемо ли на кафу?", no: "Skal vi ta en kaffe?", level: "A2" },
+  { cat: "talk", sr: "Било је баш лепо!", no: "Det var veldig koselig!", level: "A2", note: "„Koselig“ = пријатно, топло, ушушкано." },
+  { cat: "talk", sr: "Видимо се!", no: "Vi ses!", level: "A1" },
+  { cat: "talk", sr: "Лепо што се опет видимо (хвала за прошли пут).", no: "Takk for sist!", level: "B1", note: "Поздрав кад сретнеш некога с ким си се већ дружио." },
+  { cat: "talk", sr: "Срећан рођендан!", no: "Gratulerer med dagen!", level: "A1", note: "Користи се и за друге празнике и јубилеје." },
+  { cat: "talk", sr: "Срећан Божић!", no: "God jul!", level: "A1" },
+  { cat: "talk", sr: "Срећна Нова година!", no: "Godt nytt år!", level: "A1" },
+  { cat: "talk", sr: "Пријатан викенд!", no: "God helg!", level: "A1" },
+
+  // Продавница
+  { cat: "shop", sr: "Колико ово кошта?", no: "Hva koster dette?", level: "A1" },
+  { cat: "shop", sr: "Где могу да нађем млеко?", no: "Hvor finner jeg melk?", level: "A1" },
+  { cat: "shop", sr: "Само гледам, хвала.", no: "Jeg bare titter, takk.", level: "A2" },
+  { cat: "shop", sr: "Могу ли да платим картицом?", no: "Kan jeg betale med kort?", level: "A1" },
+  { cat: "shop", sr: "Треба ли вам кеса?", no: "Trenger du pose?", level: "A1", note: "Кесе се у Норвешкој плаћају." },
+  { cat: "shop", sr: "Имате ли ово у већем броју?", no: "Har dere denne i en større størrelse?", level: "A2" },
+  { cat: "shop", sr: "Могу ли да вратим ово?", no: "Kan jeg returnere dette?", level: "A2" },
+  { cat: "shop", sr: "Могу ли да добијем рачун?", no: "Kan jeg få kvittering?", level: "A2" },
+
+  // Ресторан и кафић
+  { cat: "food", sr: "Сто за двоје, молим.", no: "Et bord for to, takk.", level: "A1" },
+  { cat: "food", sr: "Могу ли да добијем јеловник?", no: "Kan jeg få menyen?", level: "A1" },
+  { cat: "food", sr: "Једну кафу, молим.", no: "En kaffe, takk.", level: "A1" },
+  { cat: "food", sr: "Шта препоручујете?", no: "Hva anbefaler du?", level: "A2" },
+  { cat: "food", sr: "Алергичан (алергична) сам на орахе.", no: "Jeg er allergisk mot nøtter.", level: "A2" },
+  { cat: "food", sr: "Рачун, молим.", no: "Kan vi få regningen?", level: "A1" },
+  { cat: "food", sr: "Можемо ли да платимо одвојено?", no: "Kan vi betale hver for oss?", level: "A2" },
+
+  // Лекар и апотека
+  { cat: "doctor", sr: "Треба ми лекар.", no: "Jeg trenger lege.", level: "A1" },
+  { cat: "doctor", sr: "Боли ме глава.", no: "Jeg har vondt i hodet.", level: "A1", note: "„Ha vondt i“ + део тела: vondt i magen (стомак), i ryggen (леђа)." },
+  { cat: "doctor", sr: "Имам температуру.", no: "Jeg har feber.", level: "A1" },
+  { cat: "doctor", sr: "Желео (желела) бих да закажем преглед.", no: "Jeg vil gjerne bestille time.", level: "A2", note: "„Time“ овде значи заказан термин, не сат." },
+  { cat: "doctor", sr: "мој изабрани лекар", no: "fastlegen min", level: "B1", note: "„Fastlege“ = изабрани лекар опште праксе." },
+  { cat: "doctor", sr: "Имате ли нешто против кашља?", no: "Har dere noe mot hoste?", level: "A2" },
+  { cat: "doctor", sr: "Колико пута дневно треба да пијем ово?", no: "Hvor mange ganger om dagen skal jeg ta dette?", level: "A2" },
+  { cat: "doctor", sr: "На боловању сам.", no: "Jeg er sykmeldt.", level: "B1" },
+
+  // Посао
+  { cat: "work", sr: "Тражим посао.", no: "Jeg søker jobb.", level: "A2" },
+  { cat: "work", sr: "Имам искуства као …", no: "Jeg har erfaring som …", level: "B1" },
+  { cat: "work", sr: "Када почињем?", no: "Når begynner jeg?", level: "A2" },
+  { cat: "work", sr: "Болестан (болесна) сам данас и не могу да дођем.", no: "Jeg er syk i dag og kan ikke komme.", level: "A2" },
+  { cat: "work", sr: "Можеш ли да ми помогнеш са овим?", no: "Kan du hjelpe meg med dette?", level: "A1" },
+  { cat: "work", sr: "Колика ће бити плата?", no: "Hva blir lønnen?", level: "A2" },
+  { cat: "work", sr: "уговор о раду", no: "arbeidskontrakt", level: "B1" },
+  { cat: "work", sr: "платни листић", no: "lønnsslipp", level: "B1" },
+  { cat: "work", sr: "годишњи одмор", no: "ferie", level: "A2" },
+
+  // NAV и институције
+  { cat: "office", sr: "Желео (желела) бих да закажем састанак.", no: "Jeg vil gjerne avtale et møte.", level: "A2" },
+  { cat: "office", sr: "Треба ми тумач.", no: "Jeg trenger tolk.", level: "A2", note: "Често имаш право на тумача код NAV-а, лекара и у суду." },
+  { cat: "office", sr: "Где да предам захтев?", no: "Hvor leverer jeg søknaden?", level: "B1" },
+  { cat: "office", sr: "Пријавио (пријавила) сам се на NAV.", no: "Jeg har registrert meg hos NAV.", level: "B1" },
+  { cat: "office", sr: "Чекам одговор на захтев.", no: "Jeg venter på svar på søknaden.", level: "B1" },
+  { cat: "office", sr: "порески картон", no: "skattekort", level: "B1" },
+  { cat: "office", sr: "лични број (као ЈМБГ)", no: "fødselsnummer", level: "B1", note: "11 цифара: датум рођења и пет цифара." },
+  { cat: "office", sr: "пријавити промену адресе", no: "melde flytting", level: "B1" },
+
+  // Стан и станодавац
+  { cat: "home", sr: "Тражим стан за изнајмљивање.", no: "Jeg ser etter en leilighet å leie.", level: "A2" },
+  { cat: "home", sr: "Колика је кирија?", no: "Hvor mye er husleien?", level: "A2" },
+  { cat: "home", sr: "Да ли је струја урачуната?", no: "Er strøm inkludert?", level: "A2" },
+  { cat: "home", sr: "Када могу да погледам стан?", no: "Når kan jeg se på leiligheten?", level: "A2" },
+  { cat: "home", sr: "Нешто је покварено у стану.", no: "Noe er ødelagt i leiligheten.", level: "A2" },
+  { cat: "home", sr: "Славина цури.", no: "Kranen lekker.", level: "B1" },
+  { cat: "home", sr: "депозит", no: "depositum", level: "B1" },
+  { cat: "home", sr: "отказни рок", no: "oppsigelsestid", level: "B1" },
+  { cat: "home", sr: "вешерај / заједничке просторије", no: "vaskerom / fellesareal", level: "B1" },
+
+  // Превоз
+  { cat: "travel", sr: "Где је најближа аутобуска станица?", no: "Hvor er nærmeste bussholdeplass?", level: "A1" },
+  { cat: "travel", sr: "Једну карту за Осло, молим.", no: "En billett til Oslo, takk.", level: "A1" },
+  { cat: "travel", sr: "Када полази следећи воз?", no: "Når går neste tog?", level: "A1" },
+  { cat: "travel", sr: "Да ли морам да преседам?", no: "Må jeg bytte?", level: "A2" },
+  { cat: "travel", sr: "Да ли аутобус касни?", no: "Er bussen forsinket?", level: "A2" },
+  { cat: "travel", sr: "Где да купим карту?", no: "Hvor kjøper jeg billett?", level: "A1", note: "Најлакше преко апликације (нпр. Ruter или Entur)." },
+
+  // Хитни случајеви
+  { cat: "sos", sr: "Помоћ!", no: "Hjelp!", level: "A1" },
+  { cat: "sos", sr: "Позовите хитну помоћ!", no: "Ring ambulanse!", level: "A1", note: "113 хитна помоћ, 112 полиција, 110 ватрогасци." },
+  { cat: "sos", sr: "Хитно је!", no: "Det haster!", level: "A2" },
+  { cat: "sos", sr: "Где је најближа болница?", no: "Hvor er nærmeste sykehus?", level: "A2" },
+  { cat: "sos", sr: "Изгубио (изгубила) сам новчаник.", no: "Jeg har mistet lommeboka.", level: "A2" },
+  { cat: "sos", sr: "Украли су ми телефон.", no: "Telefonen min er stjålet.", level: "B1" },
+];
+
+</script>
+<script>
+"use strict";
+
+/* ------------------------------------------------------------------
+ * Конфигурација
+ * ------------------------------------------------------------------ */
+
+// Бесплатан сервис за превод, без кључа (анонимно око 5000 знакова дневно).
+const MT_URL = "https://api.mymemory.translated.net/get";
+const MT_CHUNK = 450; // MyMemory прима највише 500 бајтова по захтеву
+const MAX_INPUT = 1000;
+const HISTORY_LIMIT = 50;
+
+// Кодови језика које пробамо редом, ако сервис неки не прихвати.
+const LANG_CODES = { sr: ["sr", "sr-Latn", "sr-RS"], no: ["nb", "no", "nb-NO"] };
+
+const STORAGE = {
+  theme: "prevodilac.theme",
+  direction: "prevodilac.direction",
+  script: "prevodilac.script",
+  history: "prevodilac.history",
+  langPair: "prevodilac.langPair",
+};
+
+const TOPIC_LABELS = {
+  grammar: "граматика",
+  word_order: "ред речи",
+  register: "регистар",
+};
+
+/* ------------------------------------------------------------------
+ * Помоћне функције
+ * ------------------------------------------------------------------ */
+
+const $ = (id) => document.getElementById(id);
+
+const store = {
+  get(k, fallback = null) {
+    try {
+      const v = localStorage.getItem(k);
+      return v === null ? fallback : v;
+    } catch {
+      return fallback;
+    }
+  },
+  set(k, v) {
+    try { localStorage.setItem(k, v); } catch { /* приватни режим */ }
+  },
+  remove(k) {
+    try { localStorage.removeItem(k); } catch { /* ignore */ }
+  },
+  getJSON(k, fallback) {
+    try { return JSON.parse(store.get(k)) ?? fallback; } catch { return fallback; }
+  },
+};
+
+let toastTimer;
+function toast(msg) {
+  const el = $("toast");
+  el.textContent = msg;
+  el.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove("show"), 2000);
+}
+
+function setStatus(msg, kind = "") {
+  const el = $("status");
+  el.textContent = msg;
+  el.className = "status" + (kind ? " " + kind : "");
+}
+
+// MyMemory понекад враћа HTML ентитете (&#39; итд.).
+function decodeEntities(s) {
+  const ta = document.createElement("textarea");
+  ta.innerHTML = s;
+  return ta.value;
+}
+
+/* ------------------------------------------------------------------
+ * Ћирилица ⇄ латиница
+ * ------------------------------------------------------------------ */
+
+const CYR = "АБВГДЂЕЖЗИЈКЛЉМНЊОПРСТЋУФХЦЧЏШабвгдђежзијклљмнњопрстћуфхцчџш";
+const LAT = ["A", "B", "V", "G", "D", "Đ", "E", "Ž", "Z", "I", "J", "K", "L", "Lj", "M", "N", "Nj", "O", "P", "R", "S", "T", "Ć", "U", "F", "H", "C", "Č", "Dž", "Š",
+  "a", "b", "v", "g", "d", "đ", "e", "ž", "z", "i", "j", "k", "l", "lj", "m", "n", "nj", "o", "p", "r", "s", "t", "ć", "u", "f", "h", "c", "č", "dž", "š"];
+const CYR2LAT = Object.fromEntries([...CYR].map((c, i) => [c, LAT[i]]));
+const LAT2CYR = Object.fromEntries([...CYR].map((c, i) => [LAT[i], c]));
+LAT2CYR.LJ = "Љ"; LAT2CYR.NJ = "Њ"; LAT2CYR["DŽ"] = "Џ";
+
+function toLatin(s) {
+  return [...s].map((c) => CYR2LAT[c] ?? c).join("");
+}
+
+function toCyrillic(s) {
+  let out = "";
+  for (let i = 0; i < s.length; i++) {
+    const two = s.slice(i, i + 2);
+    if (LAT2CYR[two]) { out += LAT2CYR[two]; i++; continue; }
+    out += LAT2CYR[s[i]] ?? s[i];
+  }
+  return out;
+}
+
+// За поређење са речником идиома: латиница, мала слова, без квачица.
+function normalizeSerbian(s) {
+  return toLatin(s).toLowerCase()
+    .replace(/[čć]/g, "c").replace(/š/g, "s").replace(/ž/g, "z").replace(/đ/g, "dj")
+    .replace(/\s+/g, " ");
+}
+
+/* ------------------------------------------------------------------
+ * Стање
+ * ------------------------------------------------------------------ */
+
+const state = {
+  direction: store.get(STORAGE.direction, "sr-no"), // "sr-no" | "no-sr"
+  script: store.get(STORAGE.script, "cyrl"),
+  busy: false,
+  lastResult: null,
+};
+
+/* ------------------------------------------------------------------
+ * Тема
+ * ------------------------------------------------------------------ */
+
+function applyTheme(theme) {
+  const root = document.documentElement;
+  if (theme === "light" || theme === "dark") root.setAttribute("data-theme", theme);
+  else root.removeAttribute("data-theme");
+}
+
+function effectiveDark() {
+  const t = store.get(STORAGE.theme, "auto");
+  if (t === "dark") return true;
+  if (t === "light") return false;
+  return window.matchMedia("(prefers-color-scheme: dark)").matches;
+}
+
+/* ------------------------------------------------------------------
+ * Смер и писмо
+ * ------------------------------------------------------------------ */
+
+function renderDirection() {
+  const toNo = state.direction === "sr-no";
+  $("srcLabel").textContent = toNo ? "Српски" : "Norsk (bokmål)";
+  $("tgtLabel").textContent = toNo ? "Norsk (bokmål)" : "Српски";
+  $("inputLabel").textContent = toNo
+    ? "Текст на српском (ћирилица или латиница)"
+    : "Текст на норвешком (bokmål)";
+  $("input").placeholder = toNo
+    ? "нпр. Пала ми је секира у мед — данас сам добио посао!"
+    : "f.eks. Det regner trollkjerringer, men ingen ko på isen.";
+  $("input").lang = toNo ? "sr" : "nb";
+  $("scriptField").hidden = toNo;
+  $("speakInputBtn").hidden = toNo || !ttsAvailable();
+  document.querySelectorAll('input[name="script"]').forEach((r) => { r.checked = r.value === state.script; });
+}
+
+/* ------------------------------------------------------------------
+ * Изговор (Web Speech API)
+ * ------------------------------------------------------------------ */
+
+let nbVoice = null;
+
+function ttsAvailable() {
+  if (window.PrevodilacAndroid && window.PrevodilacAndroid.speak) return true;
+  return "speechSynthesis" in window && typeof SpeechSynthesisUtterance !== "undefined";
+}
+
+function pickVoice() {
+  if (!("speechSynthesis" in window)) return;
+  const voices = speechSynthesis.getVoices();
+  nbVoice =
+    voices.find((v) => /^nb([-_]|$)/i.test(v.lang)) ||
+    voices.find((v) => /^no([-_]|$)/i.test(v.lang)) ||
+    voices.find((v) => /^nn([-_]|$)/i.test(v.lang)) ||
+    null;
+}
+
+function speakNorwegian(text) {
+  if (!text) return;
+  // У Android апликацији говори систем (TextToSpeech), јер WebView нема Web Speech.
+  if (window.PrevodilacAndroid && window.PrevodilacAndroid.speak) {
+    window.PrevodilacAndroid.speak(text);
+    return;
+  }
+  if (!ttsAvailable()) return;
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = "nb-NO";
+  if (nbVoice) u.voice = nbVoice;
+  u.rate = 0.9;
+  speechSynthesis.speak(u);
+  if (!nbVoice) toast("Норвешки глас није пронађен — прегледач користи подразумевани.");
+}
+
+/* ------------------------------------------------------------------
+ * Машински превод (MyMemory)
+ * ------------------------------------------------------------------ */
+
+// Дели текст на делове до MT_CHUNK знакова, по реченицама.
+function splitChunks(text) {
+  const sentences = text.match(/[^.!?…\n]+[.!?…]*\s*|\n+/g) || [text];
+  const chunks = [];
+  let cur = "";
+  for (const s of sentences) {
+    if ((cur + s).length > MT_CHUNK && cur) {
+      chunks.push(cur);
+      cur = "";
+    }
+    if (s.length > MT_CHUNK) {
+      for (let i = 0; i < s.length; i += MT_CHUNK) chunks.push(s.slice(i, i + MT_CHUNK));
+    } else {
+      cur += s;
+    }
+  }
+  if (cur.trim()) chunks.push(cur);
+  return chunks.filter((c) => c.trim());
+}
+
+class LangCodeError extends Error {}
+
+async function mtRequest(q, src, tgt) {
+  const url = `${MT_URL}?q=${encodeURIComponent(q)}&langpair=${encodeURIComponent(src + "|" + tgt)}`;
+  let res;
+  try {
+    res = await fetch(url);
+  } catch {
+    throw new Error("Сервис за превод није доступан. Провери интернет везу.");
+  }
+  let data = null;
+  try { data = await res.json(); } catch { /* празан одговор */ }
+  const status = Number(data && data.responseStatus) || res.status;
+  const details = String((data && data.responseDetails) || "");
+  const text = String((data && data.responseData && data.responseData.translatedText) || "");
+
+  if (status === 429 || /MYMEMORY WARNING/i.test(text)) {
+    throw new Error("Потрошен је бесплатан дневни лимит за превод (око 5000 знакова). Покушај сутра.");
+  }
+  if (/INVALID (SOURCE|TARGET) LANGUAGE|LANGUAGE PAIR/i.test(details) || /INVALID (SOURCE|TARGET) LANGUAGE/i.test(text)) {
+    throw new LangCodeError(details || text);
+  }
+  if (status !== 200 || !text) {
+    throw new Error(`Сервис за превод је вратио грешку (${status}). ${details}`.trim());
+  }
+  return { text: decodeEntities(text), matches: Array.isArray(data.matches) ? data.matches : [] };
+}
+
+// Проба кодове језика док сервис не прихвати пар, и памти који је прошао.
+async function mtTranslate(q, from, to) {
+  const saved = store.getJSON(STORAGE.langPair, {});
+  const key = `${from}-${to}`;
+  const pairs = [];
+  if (saved[key]) pairs.push(saved[key]);
+  for (const s of LANG_CODES[from]) {
+    for (const t of LANG_CODES[to]) {
+      if (!pairs.some((x) => x[0] === s && x[1] === t)) pairs.push([s, t]);
+    }
+  }
+  let lastErr;
+  for (const [s, t] of pairs) {
+    try {
+      const r = await mtRequest(q, s, t);
+      saved[key] = [s, t];
+      store.set(STORAGE.langPair, JSON.stringify(saved));
+      return r;
+    } catch (e) {
+      if (!(e instanceof LangCodeError)) throw e;
+      lastErr = e;
+    }
+  }
+  throw new Error("Сервис за превод не подржава овај пар језика. " + (lastErr ? lastErr.message : ""));
+}
+
+async function translateText(text, direction) {
+  const from = direction === "sr-no" ? "sr" : "no";
+  const to = direction === "sr-no" ? "no" : "sr";
+  const chunks = splitChunks(text);
+  const parts = [];
+  let alternatives = [];
+  for (const c of chunks) {
+    const r = await mtTranslate(c.trim(), from, to);
+    parts.push(r.text);
+    if (chunks.length === 1) {
+      const seen = new Set([r.text.trim().toLowerCase()]);
+      alternatives = r.matches
+        .map((m) => decodeEntities(String(m.translation || "")).trim())
+        .filter((t) => {
+          const k = t.toLowerCase();
+          if (!t || seen.has(k)) return false;
+          seen.add(k);
+          return true;
+        })
+        .slice(0, 3);
+    }
+  }
+  return { natural: parts.join(" ").replace(/\s+\n/g, "\n").trim(), alternatives };
+}
+
+/* ------------------------------------------------------------------
+ * Фразе и напомене (локално, без интернета)
+ * ------------------------------------------------------------------ */
+
+function findPhrases(text, direction) {
+  const dir = direction === "sr-no" ? "sr" : "no";
+  const norm = dir === "sr" ? normalizeSerbian(text) : text.toLowerCase().replace(/\s+/g, " ");
+  return IDIOMS.filter((i) => i.dir === dir && i.re.test(norm));
+}
+
+const V2_RE = /(^|[.!?]\s+)(i dag|i går|i morgen|i kveld|nå|her|der|så|derfor|da|etterpå|kanskje|heldigvis|dessverre|ofte|alltid)\s+\p{L}+\s+(jeg|du|han|hun|vi|dere|de|det|den|man)\b/iu;
+
+function buildNotes(input, output, direction) {
+  const notes = [];
+  const toNo = direction === "sr-no";
+  const nor = toNo ? output : input;
+
+  if (toNo && /(^|[^\p{L}])(Vi|Vas|Vama|Vaš\p{L}*|Ви|Вас|Вама|Ваш\p{L}*)(?![\p{L}])/u.test(input)) {
+    notes.push({ topic: "register", text: "Норвежани се и формално обраћају са „du“. Облик „De“ (Ви) звучи старинско и користи се само у врло свечаним приликама." });
+  }
+  if (!toNo && /\bdu\b/i.test(input)) {
+    notes.push({ topic: "register", text: "„Du“ се у норвешком користи и према непознатима и старијима. У српском би у таквим ситуацијама често ишло „Ви“." });
+  }
+  if (/\bdere\b/i.test(nor)) {
+    notes.push({ topic: "grammar", text: "„Dere“ значи „ви“ кад се обраћаш већем броју људи. Једној особи се увек каже „du“." });
+  }
+  if (V2_RE.test(nor)) {
+    notes.push({ topic: "word_order", text: "Ред речи V2: глагол је увек на другом месту у реченици. Ако реченица почне прилогом („I dag“, „Nå“, „Derfor“…), субјекат иде иза глагола: „I dag fikk jeg …“." });
+  }
+  if (/\bikke\b/i.test(nor)) {
+    notes.push({ topic: "word_order", text: "„Ikke“ иде иза глагола у главној реченици („jeg liker ikke …“), а испред глагола у зависној („fordi jeg ikke liker …“)." });
+  }
+  return notes;
+}
+
+/* ------------------------------------------------------------------
+ * Приказ резултата
+ * ------------------------------------------------------------------ */
+
+function renderResult(r, direction) {
+  const toNo = direction === "sr-no";
+  $("result").hidden = false;
+  $("translationCard").hidden = !r.natural;
+  $("naturalText").textContent = r.natural || "";
+  $("naturalText").lang = toNo ? "nb" : "sr";
+  document.querySelectorAll(".speak-btn").forEach((b) => { b.hidden = !toNo || !ttsAvailable(); });
+
+  // Други преводи
+  const alts = Array.isArray(r.alternatives) ? r.alternatives : [];
+  $("altWrap").hidden = !alts.length;
+  const altList = $("alternatives");
+  altList.innerHTML = "";
+  for (const a of alts) {
+    const li = document.createElement("li");
+    li.textContent = a;
+    li.lang = toNo ? "nb" : "sr";
+    altList.appendChild(li);
+  }
+
+  // Фразе
+  const phrases = Array.isArray(r.phrases) ? r.phrases : [];
+  const pWrap = $("phrases");
+  pWrap.innerHTML = "";
+  if (!phrases.length) {
+    const p = document.createElement("p");
+    p.className = "muted";
+    p.textContent = "Нисам препознао ниједну фразу из речника идиома.";
+    pWrap.appendChild(p);
+  }
+  const tgtName = toNo ? "норвешки" : "српски";
+  for (const ph of phrases) {
+    const box = document.createElement("div");
+    box.className = "phrase";
+
+    const h = document.createElement("h3");
+    h.textContent = `„${ph.original}“`;
+    if (ph.level) {
+      const tag = document.createElement("span");
+      tag.className = "tag level-tag";
+      tag.textContent = ph.level;
+      tag.title = "CEFR ниво израза";
+      h.appendChild(tag);
+    }
+    box.appendChild(h);
+
+    const dl = document.createElement("dl");
+    const add = (term, value, cls) => {
+      const dt = document.createElement("dt");
+      dt.textContent = term;
+      const dd = document.createElement("dd");
+      dd.textContent = value;
+      if (cls) dd.className = cls;
+      dl.append(dt, dd);
+    };
+    add("Буквално:", ph.literal);
+    if (ph.has) {
+      add(`Еквивалент (${tgtName}):`, ph.equivalent, "eq");
+    } else {
+      add("Еквивалент:", `Нема правог еквивалента у ${toNo ? "норвешком" : "српском"}.`, "none");
+      add("Најприродније:", ph.equivalent, "eq");
+    }
+    box.appendChild(dl);
+
+    const p = document.createElement("p");
+    p.textContent = ph.explanation;
+    box.appendChild(p);
+    pWrap.appendChild(box);
+  }
+
+  // Напомене
+  const notes = Array.isArray(r.notes) ? r.notes : [];
+  $("notesCard").hidden = !notes.length;
+  const ul = $("notes");
+  ul.innerHTML = "";
+  for (const n of notes) {
+    const li = document.createElement("li");
+    const tag = document.createElement("span");
+    tag.className = "tag";
+    tag.textContent = TOPIC_LABELS[n.topic] || n.topic;
+    li.append(tag, n.text);
+    ul.appendChild(li);
+  }
+}
+
+/* ------------------------------------------------------------------
+ * Историја
+ * ------------------------------------------------------------------ */
+
+function loadHistory() {
+  const h = store.getJSON(STORAGE.history, []);
+  // Ставке из старије верзије (са Claude-ом) имају друкчији облик, прескачемо их.
+  return Array.isArray(h) ? h.filter((e) => e && e.result && Array.isArray(e.result.phrases) && e.v === 2) : [];
+}
+
+function saveToHistory(entry) {
+  const h = loadHistory();
+  h.unshift({ ...entry, v: 2 });
+  store.set(STORAGE.history, JSON.stringify(h.slice(0, HISTORY_LIMIT)));
+}
+
+function renderHistory() {
+  const h = loadHistory();
+  const list = $("historyList");
+  list.innerHTML = "";
+  $("historyEmpty").hidden = h.length > 0;
+  $("clearHistory").hidden = h.length === 0;
+  h.forEach((e) => {
+    const li = document.createElement("li");
+    const b = document.createElement("button");
+    b.type = "button";
+    const meta = document.createElement("span");
+    meta.className = "meta";
+    const dir = e.direction === "sr-no" ? "СР → NO" : "NO → СР";
+    meta.textContent = `${dir} · ${new Date(e.time).toLocaleString("sr-RS")}`;
+    const src = document.createElement("span");
+    src.className = "src";
+    src.textContent = e.input.length > 140 ? e.input.slice(0, 140) + "…" : e.input;
+    const tgt = document.createElement("span");
+    tgt.className = "tgt";
+    const nat = e.result.natural || "";
+    tgt.textContent = nat.length > 140 ? nat.slice(0, 140) + "…" : nat;
+    b.append(meta, src, tgt);
+    b.addEventListener("click", () => {
+      state.direction = e.direction;
+      if (e.script) state.script = e.script;
+      renderDirection();
+      $("input").value = e.input;
+      updateCount();
+      state.lastResult = { result: e.result, direction: e.direction };
+      renderResult(e.result, e.direction);
+      setStatus("");
+      $("historyDialog").close();
+      $("result").scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+    li.appendChild(b);
+    list.appendChild(li);
+  });
+}
+
+/* ------------------------------------------------------------------
+ * Главни ток
+ * ------------------------------------------------------------------ */
+
+function updateCount() {
+  $("charCount").textContent = `${$("input").value.length} / ${MAX_INPUT}`;
+}
+
+async function translate() {
+  if (state.busy) return;
+  const text = $("input").value.trim();
+  if (!text) {
+    setStatus("Унеси текст за превод.", "error");
+    $("input").focus();
+    return;
+  }
+  if (text.length > MAX_INPUT) {
+    setStatus(`Текст је предугачак (највише ${MAX_INPUT} знакова).`, "error");
+    return;
+  }
+
+  state.busy = true;
+  $("translateBtn").disabled = true;
+  $("translateBtn").textContent = "Преводим…";
+  setStatus("Преводим…", "loading");
+
+  const direction = state.direction;
+  const script = state.script;
+  const phrases = findPhrases(text, direction);
+  try {
+    const mt = await translateText(text, direction);
+    let natural = mt.natural;
+    let alternatives = mt.alternatives;
+    if (direction === "no-sr") {
+      const conv = script === "latn" ? toLatin : toCyrillic;
+      natural = conv(natural);
+      alternatives = alternatives.map(conv);
+    }
+    const result = {
+      natural,
+      alternatives,
+      phrases: phrases.map(({ re, dir, ...rest }) => rest),
+      notes: buildNotes(text, natural, direction),
+    };
+    state.lastResult = { result, direction };
+    renderResult(result, direction);
+    setStatus("");
+    saveToHistory({ time: Date.now(), direction, script, input: text, result });
+    $("result").scrollIntoView({ behavior: "smooth", block: "start" });
+  } catch (err) {
+    // Фразе и напомене раде и без интернета.
+    if (phrases.length) {
+      const result = { natural: "", alternatives: [], phrases: phrases.map(({ re, dir, ...rest }) => rest), notes: buildNotes(text, "", direction) };
+      renderResult(result, direction);
+    }
+    setStatus(err.message || String(err), "error");
+  } finally {
+    state.busy = false;
+    $("translateBtn").disabled = false;
+    $("translateBtn").textContent = "Преведи";
+  }
+}
+
+async function copyText(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch {
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand("copy");
+    ta.remove();
+  }
+  toast("Копирано ✓");
+}
+
+function init() {
+  applyTheme(store.get(STORAGE.theme, "auto"));
+  renderDirection();
+  updateCount();
+
+  if ("speechSynthesis" in window) {
+    pickVoice();
+    speechSynthesis.addEventListener?.("voiceschanged", pickVoice);
+  }
+
+  $("swapBtn").addEventListener("click", () => {
+    state.direction = state.direction === "sr-no" ? "no-sr" : "sr-no";
+    store.set(STORAGE.direction, state.direction);
+    // Ако постоји превод, пребаци га у поље за унос.
+    if (state.lastResult && state.lastResult.result.natural) {
+      $("input").value = state.lastResult.result.natural;
+      updateCount();
+      state.lastResult = null;
+      $("result").hidden = true;
+    }
+    renderDirection();
+  });
+
+  document.querySelectorAll('input[name="script"]').forEach((r) =>
+    r.addEventListener("change", () => {
+      state.script = r.value;
+      store.set(STORAGE.script, r.value);
+    })
+  );
+
+  $("input").addEventListener("input", updateCount);
+  $("input").addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
+      translate();
+    }
+  });
+  $("translateBtn").addEventListener("click", translate);
+  $("clearBtn").addEventListener("click", () => {
+    $("input").value = "";
+    updateCount();
+    $("result").hidden = true;
+    state.lastResult = null;
+    setStatus("");
+    $("input").focus();
+  });
+  $("speakInputBtn").addEventListener("click", () => speakNorwegian($("input").value.trim()));
+
+  document.querySelectorAll(".copy-btn").forEach((b) =>
+    b.addEventListener("click", () => copyText($(b.dataset.target).textContent))
+  );
+  document.querySelectorAll(".speak-btn").forEach((b) =>
+    b.addEventListener("click", () => speakNorwegian($(b.dataset.target).textContent))
+  );
+
+  $("themeBtn").addEventListener("click", () => {
+    const next = effectiveDark() ? "light" : "dark";
+    store.set(STORAGE.theme, next);
+    applyTheme(next);
+  });
+
+  $("historyBtn").addEventListener("click", () => {
+    renderHistory();
+    $("historyDialog").showModal();
+  });
+  $("closeHistory").addEventListener("click", () => $("historyDialog").close());
+  $("clearHistory").addEventListener("click", () => {
+    if (!confirm("Обрисати целу историју превода?")) return;
+    store.remove(STORAGE.history);
+    renderHistory();
+  });
+
+  // Брише API кључ ако је остао из претходне верзије апликације.
+  store.remove("prevodilac.apiKey");
+
+  initExtras();
+}
+
+
+/* ------------------------------------------------------------------
+ * Нивои (CEFR)
+ * ------------------------------------------------------------------ */
+
+const LEVEL_CODES = ["A1", "A2", "B1", "B2", "C1", "C2"];
+const LEVEL_INFO = {
+  A1: "Почетник: најосновније речи и изрази, врло кратке реченице.",
+  A2: "Основни ниво: свакодневне речи, кратке и једноставне реченице.",
+  B1: "Самостални корисник: свакодневне теме течно, најчешћи идиоми.",
+  B2: "Виши средњи ниво: природан говор, честе идиоматске фразе.",
+  C1: "Напредни ниво: богат речник, идиоми, сложеније конструкције.",
+  C2: "Мајсторски ниво: као образовани изворни говорник.",
+};
+const levelRank = (l) => LEVEL_CODES.indexOf(l);
+
+// Чипови са једним избором; onChange добија изабрану вредност.
+function setupChips(wrapId, values, current, onChange) {
+  const wrap = $(wrapId);
+  if (values) {
+    wrap.innerHTML = "";
+    for (const v of values) {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.dataset.v = v.value;
+      b.textContent = v.label;
+      wrap.appendChild(b);
+    }
+  }
+  const mark = (val) => wrap.querySelectorAll("button").forEach((b) => b.setAttribute("aria-checked", String(b.dataset.v === val)));
+  wrap.setAttribute("role", "radiogroup");
+  wrap.querySelectorAll("button").forEach((b) => {
+    b.setAttribute("role", "radio");
+    b.addEventListener("click", () => { mark(b.dataset.v); onChange(b.dataset.v); });
+  });
+  mark(current);
+}
+
+const LEVEL_CHIPS = [{ value: "all", label: "Сви" }, ...LEVEL_CODES.map((l) => ({ value: l, label: l }))];
+
+// Претрага без обзира на писмо и квачице.
+function searchKey(s) {
+  return normalizeSerbian(s).replace(/[æ]/g, "ae").replace(/[ø]/g, "o").replace(/[å]/g, "a");
+}
+
+function speakButton(text, cls = "ghost mini") {
+  const b = document.createElement("button");
+  b.type = "button";
+  b.className = cls;
+  b.textContent = "🔊";
+  b.title = "Изговори на норвешком";
+  b.setAttribute("aria-label", "Изговори на норвешком");
+  b.hidden = !ttsAvailable();
+  b.addEventListener("click", () => speakNorwegian(text.replace(/\s*\(.*?\)\s*/g, " ").replace(/…/g, "")));
+  return b;
+}
+
+/* ------------------------------------------------------------------
+ * Картице (табови)
+ * ------------------------------------------------------------------ */
+
+const TABS = ["translate", "idioms", "phrases", "quiz"];
+const rendered = {};
+
+function showTab(name) {
+  if (!TABS.includes(name)) name = "translate";
+  document.querySelectorAll(".tabs button").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.tab === name)));
+  for (const t of TABS) $("tab-" + t).hidden = t !== name;
+  store.set("prevodilac.tab", name);
+  if (!rendered[name]) {
+    rendered[name] = true;
+    if (name === "idioms") renderIdiomList();
+    if (name === "phrases") renderPhraseList();
+    if (name === "quiz") nextQuestion();
+  }
+  window.scrollTo({ top: 0 });
+}
+
+/* ------------------------------------------------------------------
+ * Изрази по нивоима
+ * ------------------------------------------------------------------ */
+
+const idiomView = {
+  dir: store.get("prevodilac.idiomDir", "sr"),
+  level: store.get("prevodilac.idiomLevel", "all"),
+  q: "",
+};
+
+function phraseBox(ph) {
+  const toNo = ph.dir === "sr";
+  const box = document.createElement("div");
+  box.className = "phrase";
+
+  const head = document.createElement("div");
+  head.className = "phrase-head";
+  const h = document.createElement("h3");
+  h.textContent = `„${ph.original}“`;
+  h.lang = toNo ? "sr" : "nb";
+  const tag = document.createElement("span");
+  tag.className = "tag level-tag";
+  tag.textContent = ph.level;
+  tag.title = "CEFR ниво израза";
+  h.appendChild(tag);
+  head.appendChild(h);
+  // Изговор норвешког дела: еквивалент (српски израз) или оригинал (норвешки израз).
+  head.appendChild(speakButton(toNo ? ph.equivalent.split(" / ")[0] : ph.original));
+  box.appendChild(head);
+
+  const dl = document.createElement("dl");
+  const add = (term, value, cls) => {
+    const dt = document.createElement("dt");
+    dt.textContent = term;
+    const dd = document.createElement("dd");
+    dd.textContent = value;
+    if (cls) dd.className = cls;
+    dl.append(dt, dd);
+  };
+  add("Буквално:", ph.literal);
+  if (ph.has) {
+    add(`Еквивалент (${toNo ? "норвешки" : "српски"}):`, ph.equivalent, "eq");
+  } else {
+    add("Еквивалент:", `Нема правог еквивалента у ${toNo ? "норвешком" : "српском"}.`, "none");
+    add("Најприродније:", ph.equivalent, "eq");
+  }
+  box.appendChild(dl);
+  const p = document.createElement("p");
+  p.textContent = ph.explanation;
+  box.appendChild(p);
+  return box;
+}
+
+function renderIdiomList() {
+  const q = searchKey(idiomView.q.trim());
+  const items = IDIOMS
+    .filter((i) => i.dir === idiomView.dir)
+    .filter((i) => idiomView.level === "all" || i.level === idiomView.level)
+    .filter((i) => !q || searchKey([i.original, i.literal, i.equivalent, i.explanation].join(" ")).includes(q))
+    .sort((a, b) => levelRank(a.level) - levelRank(b.level) || a.original.localeCompare(b.original, "sr"));
+
+  $("idiomLevelDesc").innerHTML = "";
+  if (idiomView.level !== "all") {
+    const strong = document.createElement("strong");
+    strong.textContent = idiomView.level + " — ";
+    $("idiomLevelDesc").append(strong, LEVEL_INFO[idiomView.level]);
+  }
+  $("idiomCount").textContent = `Израза: ${items.length}`;
+  const list = $("idiomList");
+  list.innerHTML = "";
+  if (!items.length) {
+    const p = document.createElement("p");
+    p.className = "muted";
+    p.textContent = "Нема израза за овај избор.";
+    list.appendChild(p);
+  }
+  for (const i of items) list.appendChild(phraseBox(i));
+}
+
+/* ------------------------------------------------------------------
+ * Фразе за свакодневицу
+ * ------------------------------------------------------------------ */
+
+const phraseView = { level: store.get("prevodilac.phraseLevel", "all"), q: "" };
+
+function renderPhraseList() {
+  const q = searchKey(phraseView.q.trim());
+  const list = $("phraseList");
+  list.innerHTML = "";
+  let total = 0;
+  for (const cat of PHRASE_CATS) {
+    const items = PHRASES
+      .filter((p) => p.cat === cat.id)
+      .filter((p) => phraseView.level === "all" || p.level === phraseView.level)
+      .filter((p) => !q || searchKey([p.sr, p.no, p.note || ""].join(" ")).includes(q));
+    if (!items.length) continue;
+    total += items.length;
+
+    const det = document.createElement("details");
+    det.className = "card cat";
+    if (q || phraseView.level !== "all") det.open = true;
+    const sum = document.createElement("summary");
+    const title = document.createElement("span");
+    title.textContent = `${cat.icon} ${cat.name} `;
+    const n = document.createElement("span");
+    n.className = "n";
+    n.textContent = `(${items.length})`;
+    title.appendChild(n);
+    sum.appendChild(title);
+    det.appendChild(sum);
+
+    const ul = document.createElement("ul");
+    for (const p of items) {
+      const li = document.createElement("li");
+      const txt = document.createElement("div");
+      txt.className = "txt";
+      const no = document.createElement("div");
+      no.className = "no";
+      no.lang = "nb";
+      no.textContent = p.no;
+      const tag = document.createElement("span");
+      tag.className = "tag level-tag";
+      tag.textContent = p.level;
+      no.appendChild(tag);
+      const sr = document.createElement("div");
+      sr.className = "sr";
+      sr.textContent = p.sr;
+      txt.append(no, sr);
+      if (p.note) {
+        const note = document.createElement("div");
+        note.className = "pnote muted";
+        note.textContent = p.note;
+        txt.appendChild(note);
+      }
+      li.append(txt, speakButton(p.no));
+      ul.appendChild(li);
+    }
+    det.appendChild(ul);
+    list.appendChild(det);
+  }
+  if (!total) {
+    const p = document.createElement("p");
+    p.className = "muted";
+    p.textContent = "Нема фраза за овај избор.";
+    list.appendChild(p);
+  }
+}
+
+/* ------------------------------------------------------------------
+ * Вежбање
+ * ------------------------------------------------------------------ */
+
+const QUIZ_KEY = "prevodilac.quiz";
+const quiz = {
+  source: store.get("prevodilac.quizSource", "all"),
+  level: store.get("prevodilac.quizLevel", "B1"),
+  current: null,
+  answered: false,
+  stats: Object.assign({ right: 0, total: 0, streak: 0, best: 0, miss: {} }, store.getJSON(QUIZ_KEY, {})),
+};
+
+// Свака ставка: id, питање на једном језику, тачан одговор на другом.
+function quizPool(max = levelRank(quiz.level)) {
+  const pool = [];
+  if (quiz.source !== "phrases") {
+    for (const i of IDIOMS) {
+      if (levelRank(i.level) > max) continue;
+      const toNo = i.dir === "sr";
+      pool.push({
+        id: "i:" + i.original,
+        kind: "i",
+        prompt: i.original,
+        answer: i.equivalent,
+        promptNo: !toNo,
+        level: i.level,
+        explain: i.explanation,
+        literal: i.literal,
+      });
+    }
+  }
+  if (quiz.source !== "idioms") {
+    for (const p of PHRASES) {
+      if (levelRank(p.level) > max) continue;
+      pool.push({ id: "p:" + p.no, kind: "p", prompt: p.no, answer: p.sr, promptNo: true, level: p.level, explain: p.note || "" });
+      pool.push({ id: "q:" + p.sr, kind: "p", prompt: p.sr, answer: p.no, promptNo: false, level: p.level, explain: p.note || "" });
+    }
+  }
+  return pool;
+}
+
+function shuffle(a) {
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+// Ставке на којима си грешио чешће се враћају.
+function pickWeighted(pool) {
+  const weights = pool.map((it) => 1 + 3 * (quiz.stats.miss[it.id] || 0));
+  let r = Math.random() * weights.reduce((s, w) => s + w, 0);
+  for (let i = 0; i < pool.length; i++) {
+    r -= weights[i];
+    if (r <= 0) return pool[i];
+  }
+  return pool[pool.length - 1];
+}
+
+function renderQuizStats() {
+  const s = quiz.stats;
+  const pct = s.total ? Math.round((100 * s.right) / s.total) : 0;
+  $("quizStats").textContent = s.total
+    ? `Тачно: ${s.right} од ${s.total} (${pct}%) · низ: ${s.streak} · најбољи низ: ${s.best}`
+    : "Изабери тачан превод. Изрази на којима погрешиш враћаће се чешће.";
+}
+
+function nextQuestion() {
+  renderQuizStats();
+  const pool = quizPool();
+  const opts = $("quizOptions");
+  opts.innerHTML = "";
+  $("quizFeedback").hidden = true;
+  $("quizNext").hidden = true;
+  quiz.answered = false;
+  if (pool.length < 4) {
+    quiz.current = null;
+    $("quizAsk").textContent = "";
+    $("quizPrompt").textContent = "Нема довољно ставки за овај избор. Изабери виши ниво.";
+    $("quizSpeak").hidden = true;
+    return;
+  }
+  let item = pickWeighted(pool);
+  if (quiz.current && pool.length > 1 && item.id === quiz.current.id) item = pickWeighted(pool);
+  quiz.current = item;
+
+  // Нетачни одговори: исти језик и иста врста (израз или фраза) као тачан одговор,
+  // па остали са истог нивоа, па са било ког нивоа ако их нема довољно.
+  const sameLang = (p) => p.promptNo === item.promptNo && p.answer !== item.answer;
+  const all = quizPool(LEVEL_CODES.length - 1);
+  const candidates = [
+    ...shuffle(pool.filter((p) => sameLang(p) && p.kind === item.kind)),
+    ...shuffle(pool.filter(sameLang)),
+    ...shuffle(all.filter((p) => sameLang(p) && p.kind === item.kind)),
+  ];
+  const distractors = [];
+  for (const o of candidates) {
+    if (distractors.length === 3) break;
+    if (!distractors.includes(o.answer)) distractors.push(o.answer);
+  }
+  const choices = shuffle([item.answer, ...distractors]);
+
+  $("quizAsk").textContent = item.promptNo ? "Шта значи на српском?" : "Како се каже на норвешком?";
+  $("quizPrompt").textContent = item.prompt;
+  $("quizPrompt").lang = item.promptNo ? "nb" : "sr";
+  $("quizSpeak").hidden = !item.promptNo || !ttsAvailable();
+
+  for (const c of choices) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.textContent = c;
+    b.lang = item.promptNo ? "sr" : "nb";
+    b.addEventListener("click", () => answerQuestion(b, c));
+    opts.appendChild(b);
+  }
+}
+
+function answerQuestion(btn, choice) {
+  if (quiz.answered || !quiz.current) return;
+  quiz.answered = true;
+  const item = quiz.current;
+  const ok = choice === item.answer;
+  const s = quiz.stats;
+  s.total++;
+  if (ok) {
+    s.right++;
+    s.streak++;
+    s.best = Math.max(s.best, s.streak);
+    if (s.miss[item.id]) s.miss[item.id] = Math.max(0, s.miss[item.id] - 1);
+    if (!s.miss[item.id]) delete s.miss[item.id];
+  } else {
+    s.streak = 0;
+    s.miss[item.id] = Math.min(5, (s.miss[item.id] || 0) + 1);
+  }
+  store.set(QUIZ_KEY, JSON.stringify(s));
+
+  $("quizOptions").querySelectorAll("button").forEach((b) => {
+    b.disabled = true;
+    if (b.textContent === item.answer) b.classList.add("right");
+  });
+  if (!ok) btn.classList.add("wrong");
+
+  const fb = $("quizFeedback");
+  fb.innerHTML = "";
+  const title = document.createElement("strong");
+  title.textContent = ok ? "✓ Тачно!" : `✗ Тачно је: ${item.answer}`;
+  fb.appendChild(title);
+  if (item.literal) fb.append(`Буквално: ${item.literal}. `);
+  if (item.explain) fb.append(item.explain);
+  fb.hidden = false;
+  $("quizNext").hidden = false;
+  renderQuizStats();
+  $("quizSpeak").hidden = !ttsAvailable();
+}
+
+/* ------------------------------------------------------------------
+ * Android апликација, PWA и „О апликацији“
+ * ------------------------------------------------------------------ */
+
+const android = window.PrevodilacAndroid || null;
+
+function openAbout() {
+  $("appVersion").textContent = android && android.getVersion ? android.getVersion() : (location.host ? "веб (" + location.host + ")" : "веб");
+  $("themeSelect").value = store.get(STORAGE.theme, "auto");
+  $("aboutDialog").showModal();
+}
+
+async function checkUpdates() {
+  if (android && android.checkForUpdate) { android.checkForUpdate(); return; }
+  try {
+    const reg = navigator.serviceWorker ? await navigator.serviceWorker.getRegistration() : null;
+    if (!reg) { toast("Ажурирања стижу сама при следећем отварању странице."); return; }
+    await reg.update();
+    toast(reg.installing || reg.waiting ? "Нова верзија се преузима — отвори апликацију поново." : "Имаш најновију верзију.");
+  } catch {
+    toast("Провера није успела. Јеси ли на интернету?");
+  }
+}
+
+function initExtras() {
+  document.querySelectorAll(".tabs button").forEach((b) => b.addEventListener("click", () => showTab(b.dataset.tab)));
+
+  // Изрази
+  setupChips("idiomDirChips", null, idiomView.dir, (v) => { idiomView.dir = v; store.set("prevodilac.idiomDir", v); renderIdiomList(); });
+  setupChips("idiomLevelChips", LEVEL_CHIPS, idiomView.level, (v) => { idiomView.level = v; store.set("prevodilac.idiomLevel", v); renderIdiomList(); });
+  $("idiomSearch").addEventListener("input", (e) => { idiomView.q = e.target.value; renderIdiomList(); });
+
+  // Фразе
+  setupChips("phraseLevelChips", LEVEL_CHIPS, phraseView.level, (v) => { phraseView.level = v; store.set("prevodilac.phraseLevel", v); renderPhraseList(); });
+  $("phraseSearch").addEventListener("input", (e) => { phraseView.q = e.target.value; renderPhraseList(); });
+
+  // Вежбање
+  setupChips("quizSourceChips", null, quiz.source, (v) => { quiz.source = v; store.set("prevodilac.quizSource", v); nextQuestion(); });
+  setupChips("quizLevelChips", LEVEL_CODES.map((l) => ({ value: l, label: l })), quiz.level, (v) => { quiz.level = v; store.set("prevodilac.quizLevel", v); nextQuestion(); });
+  $("quizNext").addEventListener("click", nextQuestion);
+  // Изговара норвешки део: питање ако је на норвешком, иначе тачан одговор (видљив тек после одговора).
+  $("quizSpeak").addEventListener("click", () => {
+    const it = quiz.current;
+    if (!it) return;
+    const text = it.promptNo ? it.prompt : it.answer.split(" / ")[0];
+    speakNorwegian(text.replace(/\s*\(.*?\)\s*/g, " ").replace(/…/g, ""));
+  });
+
+  // О апликацији
+  $("aboutBtn").addEventListener("click", openAbout);
+  $("closeAbout").addEventListener("click", () => $("aboutDialog").close());
+  $("checkUpdates").addEventListener("click", checkUpdates);
+  $("themeSelect").addEventListener("change", (e) => { store.set(STORAGE.theme, e.target.value); applyTheme(e.target.value); });
+
+  showTab(store.get("prevodilac.tab", "translate"));
+
+  // Јавља Android апликацији да је страница исправно покренута (иначе враћа уграђену верзију).
+  if (android && android.ready) android.ready();
+  if ("serviceWorker" in navigator && location.protocol === "https:" && !android) {
+    navigator.serviceWorker.register("sw.js").catch(() => {});
+  }
+}
+
+document.addEventListener("DOMContentLoaded", init);
+
+</script>
 </body>
 </html>
