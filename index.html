@@ -302,9 +302,9 @@ textarea { resize: vertical; min-height: 110px; font-size: 1.05rem; }
 /* ---------- картице (табови) ---------- */
 .tabs {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 4px;
-  padding: 6px 12px;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 2px;
+  padding: 6px 8px;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
 }
@@ -312,6 +312,7 @@ textarea { resize: vertical; min-height: 110px; font-size: 1.05rem; }
   border: none;
   background: transparent;
   font-weight: 600;
+  font-size: .9rem;
   color: var(--muted);
   padding: 8px 4px;
   min-height: 40px;
@@ -383,6 +384,16 @@ input[type="search"] {
 
 .dialog select { width: 100%; }
 
+/* ---------- речи ---------- */
+.wordrows { list-style: none; margin: 0; padding: 0; }
+.wordrows li { border-top: 1px solid var(--border); padding: 10px 0; display: flex; gap: 8px; align-items: flex-start; }
+.wordrows li:first-child { border-top: none; }
+.wordrows .txt { flex: 1; min-width: 0; }
+.wordrows .no { font-weight: 600; font-size: 1.05rem; overflow-wrap: anywhere; }
+.wordrows .forms { color: var(--muted); font-size: .85rem; overflow-wrap: anywhere; }
+.wordrows .sr { overflow-wrap: anywhere; }
+.wordrows .pnote { font-size: .85rem; margin-top: 2px; }
+
 </style>
 </head>
 <body>
@@ -400,6 +411,7 @@ input[type="search"] {
     <button type="button" role="tab" data-tab="translate" aria-selected="true">Превод</button>
     <button type="button" role="tab" data-tab="idioms" aria-selected="false">Изрази</button>
     <button type="button" role="tab" data-tab="phrases" aria-selected="false">Фразе</button>
+    <button type="button" role="tab" data-tab="words" aria-selected="false">Речи</button>
     <button type="button" role="tab" data-tab="quiz" aria-selected="false">Вежбање</button>
   </nav>
   </div>
@@ -461,6 +473,12 @@ input[type="search"] {
           <div id="phrases"></div>
         </article>
 
+        <article class="card" id="wordsCard" hidden>
+          <header class="card-head"><h2>Речи из текста</h2></header>
+          <p class="explain muted">Норвешке речи из превода које постоје у речнику, са нивоом и облицима.</p>
+          <ul id="textWords" class="wordrows"></ul>
+        </article>
+
         <article class="card" id="notesCard">
           <header class="card-head"><h2>Напомене о граматици и регистру</h2></header>
           <ul id="notes" class="notes"></ul>
@@ -507,6 +525,27 @@ input[type="search"] {
       <div id="phraseList" class="list"></div>
     </section>
 
+    <!-- ============ Речи ============ -->
+    <section id="tab-words" class="tab-panel" role="tabpanel" hidden>
+      <section class="card">
+        <div class="field">
+          <label for="wordSearch">Претрага</label>
+          <input id="wordSearch" type="search" placeholder="нпр. кућа, hus, gikk…" autocomplete="off">
+        </div>
+        <div class="field">
+          <span class="label">Ниво</span>
+          <div class="chips" id="wordLevelChips" role="radiogroup" aria-label="Ниво"></div>
+          <p id="wordLevelDesc" class="level-desc"></p>
+        </div>
+        <div class="field">
+          <label for="wordTopic">Тема</label>
+          <select id="wordTopic"></select>
+        </div>
+      </section>
+      <p id="wordCount" class="muted count"></p>
+      <div id="wordList" class="list"></div>
+    </section>
+
     <!-- ============ Вежбање ============ -->
     <section id="tab-quiz" class="tab-panel" role="tabpanel" hidden>
       <section class="card">
@@ -516,6 +555,7 @@ input[type="search"] {
             <button type="button" data-v="all" aria-checked="true">Све</button>
             <button type="button" data-v="idioms" aria-checked="false">Изрази</button>
             <button type="button" data-v="phrases" aria-checked="false">Фразе</button>
+            <button type="button" data-v="words" aria-checked="false">Речи</button>
           </div>
         </div>
         <div class="field">
@@ -849,6 +889,317 @@ const IDIOMS = [
     explanation: "Најчешћи поздрав при растанку." },
 ];
 
+</script>
+<script>
+/*
+ * Речник речи по нивоима.
+ * [норвешки основни облик, важни облици, српски, ниво, тема, напомена (није обавезна)]
+ * Именице: члан en/ei/et; облици: одређени једнина, неодређена множина, одређена множина.
+ * Глаголи: „å“ + инфинитив; облици: презент, претерит, перфекат.
+ * Придеви: облици: средњи род, множина (одређени облик).
+ */
+const WORD_TOPICS = [
+  { id: "basic", name: "Основне речи" },
+  { id: "people", name: "Људи и породица" },
+  { id: "food", name: "Храна и пиће" },
+  { id: "home", name: "Кућа и стан" },
+  { id: "time", name: "Време и календар" },
+  { id: "health", name: "Тело и здравље" },
+  { id: "work", name: "Посао и школа" },
+  { id: "city", name: "Град и превоз" },
+  { id: "nature", name: "Природа и време" },
+  { id: "society", name: "Друштво и институције" },
+  { id: "verbs", name: "Глаголи" },
+  { id: "adj", name: "Придеви" },
+  { id: "adv", name: "Прилози и везници" },
+];
+
+const WORDS = [
+  // ---------- Основне речи ----------
+  ["ja", "", "да", "A1", "basic"],
+  ["nei", "", "не", "A1", "basic"],
+  ["takk", "", "хвала", "A1", "basic"],
+  ["hva", "", "шта", "A1", "basic"],
+  ["hvem", "", "ко", "A1", "basic"],
+  ["hvor", "", "где; колико (hvor mye)", "A1", "basic"],
+  ["når", "", "када", "A1", "basic"],
+  ["hvorfor", "", "зашто", "A1", "basic"],
+  ["hvordan", "", "како", "A1", "basic"],
+  ["et navn", "navnet, navn, navnene", "име", "A1", "basic"],
+  ["en telefon", "telefonen, telefoner, telefonene", "телефон", "A1", "basic"],
+  ["en bok", "boka, bøker, bøkene", "књига", "A1", "basic"],
+  ["penger", "pengene", "новац", "A1", "basic", "Увек множина: „pengene mine“."],
+  ["et språk", "språket, språk, språkene", "језик", "A2", "basic"],
+  ["et problem", "problemet, problemer, problemene", "проблем", "A2", "basic"],
+  ["en grunn", "grunnen, grunner, grunnene", "разлог", "B1", "basic"],
+  ["en mulighet", "muligheten, muligheter, mulighetene", "могућност", "B1", "basic"],
+  ["en mening", "meningen, meninger, meningene", "мишљење; смисао", "B1", "basic"],
+  ["en forskjell", "forskjellen, forskjeller, forskjellene", "разлика", "B1", "basic"],
+  ["en fordel", "fordelen, fordeler, fordelene", "предност", "B1", "basic"],
+  ["en ulempe", "ulempen, ulemper, ulempene", "мана, недостатак", "B2", "basic"],
+  ["en utfordring", "utfordringen, utfordringer, utfordringene", "изазов", "B2", "basic"],
+  ["en hensikt", "hensikten, hensikter, hensiktene", "сврха, намера", "B2", "basic"],
+  ["et forhold", "forholdet, forhold, forholdene", "однос; услов", "B2", "basic"],
+  ["et hensyn", "hensynet, hensyn, hensynene", "обзир", "C1", "basic", "„Ta hensyn til“ = водити рачуна о."],
+  ["en forutsetning", "forutsetningen, forutsetninger, forutsetningene", "предуслов", "C1", "basic"],
+  ["en ettertanke", "ettertanken", "размишљање, премишљање", "C2", "basic", "„Ved nærmere ettertanke“ = кад боље размислим."],
+  ["en særegenhet", "særegenheten, særegenheter, særegenhetene", "особеност", "C2", "basic"],
+
+  // ---------- Људи и породица ----------
+  ["en mann", "mannen, menn, mennene", "мушкарац; муж", "A1", "people"],
+  ["en kvinne", "kvinnen, kvinner, kvinnene", "жена", "A1", "people"],
+  ["et barn", "barnet, barn, barna", "дете", "A1", "people"],
+  ["en venn", "vennen, venner, vennene", "пријатељ", "A1", "people"],
+  ["en familie", "familien, familier, familiene", "породица", "A1", "people"],
+  ["en mor", "moren, mødre, mødrene", "мајка", "A1", "people"],
+  ["en far", "faren, fedre, fedrene", "отац", "A1", "people"],
+  ["en bror", "broren, brødre, brødrene", "брат", "A1", "people"],
+  ["en søster", "søsteren, søstre, søstrene", "сестра", "A1", "people"],
+  ["en nabo", "naboen, naboer, naboene", "комшија", "A2", "people"],
+  ["en kollega", "kollegaen, kolleger, kollegene", "колега", "B1", "people"],
+  ["en sjef", "sjefen, sjefer, sjefene", "шеф", "B1", "people"],
+  ["en innvandrer", "innvandreren, innvandrere, innvandrerne", "имигрант", "B1", "people"],
+
+  // ---------- Храна и пиће ----------
+  ["et vann", "vannet", "вода", "A1", "food"],
+  ["et brød", "brødet, brød, brødene", "хлеб", "A1", "food"],
+  ["en melk", "melken", "млеко", "A1", "food"],
+  ["en kaffe", "kaffen", "кафа", "A1", "food"],
+  ["en te", "teen", "чај", "A1", "food"],
+  ["et egg", "egget, egg, eggene", "јаје", "A1", "food"],
+  ["en ost", "osten, oster, ostene", "сир", "A1", "food"],
+  ["et kjøtt", "kjøttet", "месо", "A1", "food"],
+  ["en fisk", "fisken, fisker, fiskene", "риба", "A1", "food"],
+  ["et eple", "eplet, epler, eplene", "јабука", "A1", "food"],
+  ["en middag", "middagen, middager, middagene", "ручак (главни оброк поподне)", "A2", "food", "Норвежани главни оброк („middag“) једу око 16–18 ч."],
+  ["en frokost", "frokosten, frokoster, frokostene", "доручак", "A2", "food"],
+  ["et pålegg", "pålegget", "оно што се ставља на хлеб", "A2", "food"],
+
+  // ---------- Кућа и стан ----------
+  ["et hus", "huset, hus, husene", "кућа", "A1", "home"],
+  ["et rom", "rommet, rom, rommene", "соба", "A1", "home"],
+  ["en dør", "døra, dører, dørene", "врата", "A1", "home"],
+  ["et vindu", "vinduet, vinduer, vinduene", "прозор", "A1", "home"],
+  ["et bord", "bordet, bord, bordene", "сто", "A1", "home"],
+  ["en stol", "stolen, stoler, stolene", "столица", "A1", "home"],
+  ["en seng", "senga, senger, sengene", "кревет", "A1", "home"],
+  ["en leilighet", "leiligheten, leiligheter, leilighetene", "стан", "A2", "home"],
+  ["et kjøkken", "kjøkkenet, kjøkken, kjøkkenene", "кухиња", "A2", "home"],
+  ["et bad", "badet, bad, badene", "купатило", "A2", "home"],
+  ["en husleie", "husleien", "кирија", "B1", "home"],
+  ["en strøm", "strømmen", "струја", "B1", "home"],
+  ["et depositum", "depositumet", "депозит", "B1", "home"],
+
+  // ---------- Време и календар ----------
+  ["en dag", "dagen, dager, dagene", "дан", "A1", "time"],
+  ["en uke", "uka, uker, ukene", "недеља (седмица)", "A1", "time"],
+  ["en måned", "måneden, måneder, månedene", "месец", "A1", "time"],
+  ["et år", "året, år, årene", "година", "A1", "time"],
+  ["en time", "timen, timer, timene", "сат (60 минута); заказан термин", "A1", "time", "„Bestille time“ = заказати термин."],
+  ["et minutt", "minuttet, minutter, minuttene", "минут", "A1", "time"],
+  ["i dag", "", "данас", "A1", "time"],
+  ["i morgen", "", "сутра", "A1", "time"],
+  ["i går", "", "јуче", "A1", "time"],
+  ["en tid", "tiden, tider, tidene", "време (које пролази)", "A2", "time", "„Tid“ = време које пролази, „vær“ = временске прилике."],
+  ["en helg", "helgen, helger, helgene", "викенд", "A2", "time"],
+  ["en ferie", "ferien, ferier, feriene", "одмор, распуст", "A2", "time"],
+
+  // ---------- Тело и здравље ----------
+  ["et hode", "hodet, hoder, hodene", "глава", "A1", "health"],
+  ["en mage", "magen, mager, magene", "стомак", "A1", "health"],
+  ["en lege", "legen, leger, legene", "лекар", "A1", "health"],
+  ["et apotek", "apoteket, apotek, apotekene", "апотека", "A2", "health"],
+  ["et sykehus", "sykehuset, sykehus, sykehusene", "болница", "A2", "health"],
+  ["en sykdom", "sykdommen, sykdommer, sykdommene", "болест", "B1", "health"],
+  ["en resept", "resepten, resepter, reseptene", "рецепт (лекарски)", "B1", "health"],
+  ["en ulykke", "ulykken, ulykker, ulykkene", "несрећа (удес)", "B1", "health"],
+
+  // ---------- Посао и школа ----------
+  ["en jobb", "jobben, jobber, jobbene", "посао", "A1", "work"],
+  ["en skole", "skolen, skoler, skolene", "школа", "A1", "work"],
+  ["et møte", "møtet, møter, møtene", "састанак", "B1", "work"],
+  ["en lønn", "lønnen, lønner, lønnene", "плата", "B1", "work"],
+  ["en stilling", "stillingen, stillinger, stillingene", "радно место", "B1", "work", "„Ledig stilling“ = слободно радно место (оглас)."],
+  ["en utdanning", "utdanningen, utdanninger, utdanningene", "образовање", "B1", "work"],
+  ["en erfaring", "erfaringen, erfaringer, erfaringene", "искуство", "B1", "work"],
+  ["en kontrakt", "kontrakten, kontrakter, kontraktene", "уговор", "B1", "work"],
+  ["en avtale", "avtalen, avtaler, avtalene", "договор; заказан састанак", "B1", "work"],
+
+  // ---------- Град и превоз ----------
+  ["en by", "byen, byer, byene", "град", "A1", "city"],
+  ["en gate", "gata, gater, gatene", "улица", "A1", "city"],
+  ["en butikk", "butikken, butikker, butikkene", "продавница", "A1", "city"],
+  ["en buss", "bussen, busser, bussene", "аутобус", "A1", "city"],
+  ["et tog", "toget, tog, togene", "воз", "A1", "city"],
+  ["en bil", "bilen, biler, bilene", "ауто", "A1", "city"],
+  ["en billett", "billetten, billetter, billettene", "карта (за превоз)", "A1", "city"],
+  ["en regning", "regningen, regninger, regningene", "рачун (за плаћање)", "B1", "city"],
+  ["en kvittering", "kvitteringen, kvitteringer, kvitteringene", "признаница, рачун из продавнице", "B1", "city"],
+
+  // ---------- Природа и време ----------
+  ["et vær", "været", "време (временске прилике)", "A2", "nature"],
+  ["et regn", "regnet", "киша", "A2", "nature"],
+  ["en snø", "snøen", "снег", "A2", "nature"],
+  ["en sol", "sola", "сунце", "A2", "nature"],
+  ["en vind", "vinden, vinder, vindene", "ветар", "A2", "nature"],
+  ["et fjell", "fjellet, fjell, fjellene", "планина", "A2", "nature"],
+  ["en skog", "skogen, skoger, skogene", "шума", "A2", "nature"],
+  ["en tur", "turen, turer, turene", "шетња, излет", "A2", "nature", "„Gå på tur“ = ићи у шетњу, на излет у природу."],
+  ["et hav", "havet, hav, havene", "море, океан", "B1", "nature"],
+
+  // ---------- Друштво и институције ----------
+  ["en søknad", "søknaden, søknader, søknadene", "захтев, пријава", "B1", "society"],
+  ["en skatt", "skatten, skatter, skattene", "порез", "B1", "society"],
+  ["en kommune", "kommunen, kommuner, kommunene", "општина", "B1", "society"],
+  ["et samfunn", "samfunnet, samfunn, samfunnene", "друштво", "B2", "society"],
+  ["et fylke", "fylket, fylker, fylkene", "округ", "B2", "society"],
+  ["et statsborgerskap", "statsborgerskapet", "држављанство", "B2", "society"],
+  ["en oppholdstillatelse", "oppholdstillatelsen, oppholdstillatelser, oppholdstillatelsene", "дозвола боравка", "B2", "society"],
+  ["en tillit", "tilliten", "поверење", "B2", "society"],
+  ["en likestilling", "likestillingen", "равноправност", "C1", "society"],
+  ["en velferd", "velferden", "благостање (социјална држава)", "C1", "society"],
+
+  // ---------- Глаголи ----------
+  ["å være", "er, var, har vært", "бити", "A1", "verbs"],
+  ["å ha", "har, hadde, har hatt", "имати", "A1", "verbs"],
+  ["å gå", "går, gikk, har gått", "ићи (пешке)", "A1", "verbs"],
+  ["å komme", "kommer, kom, har kommet", "доћи", "A1", "verbs"],
+  ["å spise", "spiser, spiste, har spist", "јести", "A1", "verbs"],
+  ["å drikke", "drikker, drakk, har drukket", "пити", "A1", "verbs"],
+  ["å sove", "sover, sov, har sovet", "спавати", "A1", "verbs"],
+  ["å snakke", "snakker, snakket, har snakket", "говорити", "A1", "verbs"],
+  ["å se", "ser, så, har sett", "видети", "A1", "verbs"],
+  ["å like", "liker, likte, har likt", "волети, свиђати се", "A1", "verbs"],
+  ["å bo", "bor, bodde, har bodd", "становати", "A1", "verbs"],
+  ["å jobbe", "jobber, jobbet, har jobbet", "радити (на послу)", "A1", "verbs"],
+  ["å lese", "leser, leste, har lest", "читати", "A1", "verbs"],
+  ["å skrive", "skriver, skrev, har skrevet", "писати", "A1", "verbs"],
+  ["å kjøpe", "kjøper, kjøpte, har kjøpt", "куповати", "A1", "verbs"],
+  ["å hete", "heter, het, har hett", "звати се", "A1", "verbs"],
+  ["å forstå", "forstår, forsto, har forstått", "разумети", "A1", "verbs"],
+  ["å kunne", "kan, kunne, har kunnet", "моћи; знати (умети)", "A1", "verbs"],
+  ["å ville", "vil, ville, har villet", "хтети", "A1", "verbs"],
+  ["å måtte", "må, måtte, har måttet", "морати", "A1", "verbs"],
+  ["å skulle", "skal, skulle, har skullet", "требати; ићи (намера)", "A1", "verbs", "„Jeg skal …“ = идем да / планирам да …"],
+  ["å si", "sier, sa, har sagt", "рећи", "A1", "verbs"],
+  ["å gjøre", "gjør, gjorde, har gjort", "чинити, радити", "A1", "verbs"],
+  ["å få", "får, fikk, har fått", "добити; смети", "A1", "verbs"],
+  ["å lære", "lærer, lærte, har lært", "учити", "A1", "verbs"],
+  ["å ta", "tar, tok, har tatt", "узети", "A1", "verbs"],
+  ["å vite", "vet, visste, har visst", "знати (податак)", "A2", "verbs", "„Vite“ = знати чињеницу, „kunne“ = знати (умети), „kjenne“ = познавати."],
+  ["å kjenne", "kjenner, kjente, har kjent", "познавати", "A2", "verbs"],
+  ["å gi", "gir, ga, har gitt", "дати", "A2", "verbs"],
+  ["å hjelpe", "hjelper, hjalp, har hjulpet", "помоћи", "A2", "verbs"],
+  ["å vente", "venter, ventet, har ventet", "чекати", "A2", "verbs"],
+  ["å betale", "betaler, betalte, har betalt", "платити", "A2", "verbs"],
+  ["å reise", "reiser, reiste, har reist", "путовати", "A2", "verbs"],
+  ["å kjøre", "kjører, kjørte, har kjørt", "возити", "A2", "verbs"],
+  ["å bruke", "bruker, brukte, har brukt", "користити", "A2", "verbs"],
+  ["å finne", "finner, fant, har funnet", "наћи", "A2", "verbs"],
+  ["å tro", "tror, trodde, har trodd", "веровати; мислити (претпостављати)", "A2", "verbs"],
+  ["å tenke", "tenker, tenkte, har tenkt", "мислити (размишљати)", "A2", "verbs"],
+  ["å glemme", "glemmer, glemte, har glemt", "заборавити", "A2", "verbs"],
+  ["å huske", "husker, husket, har husket", "сећати се, памтити", "A2", "verbs"],
+  ["å prøve", "prøver, prøvde, har prøvd", "пробати", "A2", "verbs"],
+  ["å begynne", "begynner, begynte, har begynt", "почети", "A2", "verbs"],
+  ["å slutte", "slutter, sluttet, har sluttet", "престати; дати отказ", "A2", "verbs"],
+  ["å åpne", "åpner, åpnet, har åpnet", "отворити", "A2", "verbs"],
+  ["å lukke", "lukker, lukket, har lukket", "затворити", "A2", "verbs"],
+  ["å sende", "sender, sendte, har sendt", "послати", "A2", "verbs"],
+  ["å bestille", "bestiller, bestilte, har bestilt", "наручити; заказати", "A2", "verbs"],
+  ["å trenge", "trenger, trengte, har trengt", "требати (имати потребу)", "A2", "verbs"],
+  ["å bli", "blir, ble, har blitt", "постати; остати", "A2", "verbs"],
+  ["å ligge", "ligger, lå, har ligget", "лежати", "A2", "verbs"],
+  ["å sitte", "sitter, satt, har sittet", "седети", "A2", "verbs"],
+  ["å stå", "står, sto, har stått", "стајати", "A2", "verbs"],
+  ["å løpe", "løper, løp, har løpt", "трчати", "A2", "verbs"],
+  ["å vaske", "vasker, vasket, har vasket", "прати", "A2", "verbs"],
+  ["å lage", "lager, laget, har laget", "правити; кувати (lage mat)", "A2", "verbs"],
+  ["å synes", "synes, syntes, har syntes", "мислити (лично мишљење)", "B1", "verbs", "„Jeg synes“ = по мом мишљењу, „jeg tror“ = претпостављам."],
+  ["å søke", "søker, søkte, har søkt", "тражити; конкурисати", "B1", "verbs"],
+  ["å flytte", "flytter, flyttet, har flyttet", "селити се", "B1", "verbs"],
+  ["å leie", "leier, leide, har leid", "изнајмити", "B1", "verbs"],
+  ["å orke", "orker, orket, har orket", "имати снаге (воље)", "B1", "verbs"],
+  ["å klare", "klarer, klarte, har klart", "успети, изаћи на крај", "B1", "verbs"],
+  ["å legge", "legger, la, har lagt", "ставити (положити)", "B1", "verbs"],
+  ["å påvirke", "påvirker, påvirket, har påvirket", "утицати", "B2", "verbs"],
+  ["å forbedre", "forbedrer, forbedret, har forbedret", "побољшати", "B2", "verbs"],
+  ["å unngå", "unngår, unngikk, har unngått", "избећи", "B2", "verbs"],
+  ["å foreslå", "foreslår, foreslo, har foreslått", "предложити", "B2", "verbs"],
+  ["å innrømme", "innrømmer, innrømmet, har innrømmet", "признати", "B2", "verbs"],
+  ["å oppnå", "oppnår, oppnådde, har oppnådd", "постићи", "B2", "verbs"],
+  ["å vurdere", "vurderer, vurderte, har vurdert", "проценити, размотрити", "B2", "verbs"],
+  ["å utsette", "utsetter, utsatte, har utsatt", "одложити", "B2", "verbs"],
+  ["å iverksette", "iverksetter, iverksatte, har iverksatt", "спровести", "C1", "verbs"],
+  ["å forkaste", "forkaster, forkastet, har forkastet", "одбацити", "C2", "verbs"],
+  ["å anføre", "anfører, anførte, har anført", "навести (у тексту)", "C2", "verbs"],
+
+  // ---------- Придеви ----------
+  ["god", "godt, gode", "добар", "A1", "adj", "Поређење: bedre, best."],
+  ["stor", "stort, store", "велик", "A1", "adj", "Поређење: større, størst."],
+  ["liten", "lite, små (lille)", "мали", "A1", "adj"],
+  ["ny", "nytt, nye", "нов", "A1", "adj"],
+  ["gammel", "gammelt, gamle", "стар", "A1", "adj"],
+  ["varm", "varmt, varme", "топао", "A1", "adj"],
+  ["kald", "kaldt, kalde", "хладан", "A1", "adj"],
+  ["fin", "fint, fine", "леп, фин", "A1", "adj"],
+  ["glad", "glad, glade", "срећан, весео", "A1", "adj"],
+  ["dårlig", "dårlig, dårlige", "лош", "A2", "adj"],
+  ["billig", "billig, billige", "јефтин", "A2", "adj"],
+  ["dyr", "dyrt, dyre", "скуп", "A2", "adj"],
+  ["lett", "lett, lette", "лак", "A2", "adj"],
+  ["vanskelig", "vanskelig, vanskelige", "тежак (компликован)", "A2", "adj"],
+  ["syk", "sykt, syke", "болестан", "A2", "adj"],
+  ["trøtt", "trøtt, trøtte", "уморан, поспан", "A2", "adj"],
+  ["sulten", "sultent, sultne", "гладан", "A2", "adj"],
+  ["pen", "pent, pene", "леп", "A2", "adj"],
+  ["snill", "snilt, snille", "љубазан, добар", "A2", "adj"],
+  ["morsom", "morsomt, morsomme", "забаван", "A2", "adj"],
+  ["kjedelig", "kjedelig, kjedelige", "досадан", "A2", "adj"],
+  ["flink", "flinkt, flinke", "вешт, способан", "A2", "adj"],
+  ["viktig", "viktig, viktige", "важан", "B1", "adj"],
+  ["ledig", "ledig, ledige", "слободан (празан)", "B1", "adj"],
+  ["rolig", "rolig, rolige", "миран", "B1", "adj"],
+  ["travel", "travelt, travle", "заузет", "B1", "adj", "„Jeg har det travelt“ = имам пуно посла."],
+  ["ekkel", "ekkelt, ekle", "одвратан", "B1", "adj"],
+  ["nøyaktig", "nøyaktig, nøyaktige", "тачан, прецизан", "B2", "adj"],
+  ["bærekraftig", "bærekraftig, bærekraftige", "одржив", "C1", "adj"],
+  ["omfattende", "omfattende", "свеобухватан", "C1", "adj"],
+  ["uomtvistelig", "uomtvistelig, uomtvistelige", "неоспоран", "C2", "adj"],
+
+  // ---------- Прилози и везници ----------
+  ["og", "", "и", "A1", "adv"],
+  ["men", "", "али", "A1", "adv"],
+  ["eller", "", "или", "A1", "adv"],
+  ["ikke", "", "не", "A1", "adv", "Иде иза глагола: „Jeg liker ikke kaffe.“"],
+  ["også", "", "такође", "A1", "adv"],
+  ["veldig", "", "веома", "A1", "adv"],
+  ["her", "", "овде", "A1", "adv"],
+  ["der", "", "тамо", "A1", "adv"],
+  ["nå", "", "сада", "A1", "adv"],
+  ["kanskje", "", "можда", "A1", "adv"],
+  ["alltid", "", "увек", "A1", "adv"],
+  ["aldri", "", "никад", "A1", "adv"],
+  ["ofte", "", "често", "A1", "adv"],
+  ["derfor", "", "зато", "A2", "adv", "После „derfor“ иде инверзија: „Derfor kom jeg.“"],
+  ["fordi", "", "јер", "A2", "adv"],
+  ["hvis", "", "ако", "A2", "adv"],
+  ["snart", "", "ускоро", "A2", "adv"],
+  ["allerede", "", "већ", "A2", "adv"],
+  ["dessverre", "", "нажалост", "A2", "adv"],
+  ["noen ganger", "", "понекад", "A2", "adv"],
+  ["likevel", "", "ипак", "B1", "adv"],
+  ["selv om", "", "иако", "B1", "adv"],
+  ["egentlig", "", "заправо", "B1", "adv"],
+  ["fortsatt", "", "још увек", "B1", "adv"],
+  ["plutselig", "", "изненада", "B1", "adv"],
+  ["heldigvis", "", "срећом", "B1", "adv"],
+  ["dessuten", "", "осим тога", "B2", "adv"],
+  ["ettersom", "", "пошто, будући да", "B2", "adv"],
+  ["nemlig", "", "наиме", "B2", "adv"],
+  ["imidlertid", "", "међутим", "C1", "adv"],
+  ["tilsynelatende", "", "наизглед", "C1", "adv"],
+].map(([no, forms, sr, level, topic, note]) => ({ no, forms, sr, level, topic, note: note || "" }));
 </script>
 <script>
 /*
@@ -1387,6 +1738,15 @@ function renderResult(r, direction) {
     pWrap.appendChild(box);
   }
 
+  // Речи из текста (у историји се чувају само основни облици)
+  const words = (Array.isArray(r.words) ? r.words : [])
+    .map((no) => WORDS.find((w) => w.no === no))
+    .filter(Boolean);
+  $("wordsCard").hidden = !words.length;
+  const wl = $("textWords");
+  wl.innerHTML = "";
+  for (const w of words) wl.appendChild(wordRow(w));
+
   // Напомене
   const notes = Array.isArray(r.notes) ? r.notes : [];
   $("notesCard").hidden = !notes.length;
@@ -1500,6 +1860,7 @@ async function translate() {
       alternatives,
       phrases: phrases.map(({ re, dir, ...rest }) => rest),
       notes: buildNotes(text, natural, direction),
+      words: findWords(direction === "sr-no" ? natural : text).map((w) => w.no),
     };
     state.lastResult = { result, direction };
     renderResult(result, direction);
@@ -1675,7 +2036,7 @@ function speakButton(text, cls = "ghost mini") {
  * Картице (табови)
  * ------------------------------------------------------------------ */
 
-const TABS = ["translate", "idioms", "phrases", "quiz"];
+const TABS = ["translate", "idioms", "phrases", "words", "quiz"];
 const rendered = {};
 
 function showTab(name) {
@@ -1687,6 +2048,7 @@ function showTab(name) {
     rendered[name] = true;
     if (name === "idioms") renderIdiomList();
     if (name === "phrases") renderPhraseList();
+    if (name === "words") renderWordList();
     if (name === "quiz") nextQuestion();
   }
   window.scrollTo({ top: 0 });
@@ -1840,6 +2202,133 @@ function renderPhraseList() {
   }
 }
 
+
+/* ------------------------------------------------------------------
+ * Речник речи по нивоима
+ * ------------------------------------------------------------------ */
+
+const wordView = {
+  level: store.get("prevodilac.wordLevel", "all"),
+  topic: store.get("prevodilac.wordTopic", "all"),
+  q: "",
+};
+
+// Сви облици речи (основни без члана и „å“, плус наведени облици) → речи из речника.
+const WORD_INDEX = new Map();
+const WORD_MULTI = [];
+for (const w of WORDS) {
+  const base = w.no.replace(/^(en|ei|et|å) /, "").toLowerCase();
+  if (base.includes(" ")) { WORD_MULTI.push([base, w]); continue; }
+  const forms = [base, ...w.forms.toLowerCase().replace(/\(.*?\)/g, ",").split(",")]
+    .map((f) => f.trim().replace(/^har /, ""))
+    .filter((f) => f && !f.includes(" "));
+  for (const f of new Set(forms)) {
+    if (!WORD_INDEX.has(f)) WORD_INDEX.set(f, []);
+    WORD_INDEX.get(f).push(w);
+  }
+}
+
+// Речи из речника које се појављују у норвешком тексту, редом појављивања.
+function findWords(text) {
+  let lower = " " + text.toLowerCase().replace(/[^a-zæøå\s-]/g, " ").replace(/\s+/g, " ") + " ";
+  const found = [];
+  const add = (w, pos) => { if (!found.some((f) => f.w === w)) found.push({ w, pos }); };
+  for (const [phrase, w] of WORD_MULTI) {
+    const i = lower.indexOf(" " + phrase + " ");
+    if (i < 0) continue;
+    add(w, i);
+    // Речи из израза („i dag“) се не броје поново као посебне речи („en dag“).
+    lower = lower.split(" " + phrase + " ").join(" " + phrase.replace(/[^ ]/g, "_") + " ");
+  }
+  let pos = 0;
+  for (const tok of lower.split(" ")) {
+    pos += tok.length + 1;
+    for (const w of WORD_INDEX.get(tok) || []) add(w, pos);
+  }
+  return found.sort((a, b) => a.pos - b.pos).map((f) => f.w);
+}
+
+function wordRow(w) {
+  const li = document.createElement("li");
+  const txt = document.createElement("div");
+  txt.className = "txt";
+  const no = document.createElement("div");
+  no.className = "no";
+  no.lang = "nb";
+  no.textContent = w.no;
+  const tag = document.createElement("span");
+  tag.className = "tag level-tag";
+  tag.textContent = w.level;
+  no.appendChild(tag);
+  txt.appendChild(no);
+  if (w.forms) {
+    const forms = document.createElement("div");
+    forms.className = "forms";
+    forms.lang = "nb";
+    forms.textContent = w.forms;
+    txt.appendChild(forms);
+  }
+  const sr = document.createElement("div");
+  sr.className = "sr";
+  sr.textContent = w.sr;
+  txt.appendChild(sr);
+  if (w.note) {
+    const note = document.createElement("div");
+    note.className = "pnote muted";
+    note.textContent = w.note;
+    txt.appendChild(note);
+  }
+  li.append(txt, speakButton(w.no.replace(/^(en|ei|et) /, "")));
+  return li;
+}
+
+function renderWordList() {
+  const q = searchKey(wordView.q.trim());
+  const items = WORDS
+    .filter((w) => wordView.level === "all" || w.level === wordView.level)
+    .filter((w) => wordView.topic === "all" || w.topic === wordView.topic)
+    .filter((w) => !q || searchKey([w.no, w.forms, w.sr, w.note].join(" ")).includes(q))
+    .sort((a, b) => levelRank(a.level) - levelRank(b.level) || a.no.replace(/^(en|ei|et|å) /, "").localeCompare(b.no.replace(/^(en|ei|et|å) /, ""), "nb"));
+
+  $("wordLevelDesc").innerHTML = "";
+  if (wordView.level !== "all") {
+    const strong = document.createElement("strong");
+    strong.textContent = wordView.level + " — ";
+    $("wordLevelDesc").append(strong, LEVEL_INFO[wordView.level]);
+  }
+  $("wordCount").textContent = `Речи: ${items.length}`;
+  const list = $("wordList");
+  list.innerHTML = "";
+  list.className = "list";
+  if (!items.length) {
+    const p = document.createElement("p");
+    p.className = "muted";
+    p.textContent = "Нема речи за овај избор.";
+    list.appendChild(p);
+    return;
+  }
+  list.className = "list card";
+  const ul = document.createElement("ul");
+  ul.className = "wordrows";
+  for (const w of items) ul.appendChild(wordRow(w));
+  list.appendChild(ul);
+}
+
+function initWords() {
+  setupChips("wordLevelChips", LEVEL_CHIPS, wordView.level, (v) => { wordView.level = v; store.set("prevodilac.wordLevel", v); renderWordList(); });
+  const sel = $("wordTopic");
+  sel.innerHTML = "";
+  for (const t of [{ id: "all", name: "Све теме" }, ...WORD_TOPICS]) {
+    const o = document.createElement("option");
+    o.value = t.id;
+    o.textContent = t.name;
+    sel.appendChild(o);
+  }
+  sel.value = WORD_TOPICS.some((t) => t.id === wordView.topic) ? wordView.topic : "all";
+  sel.addEventListener("change", () => { wordView.topic = sel.value; store.set("prevodilac.wordTopic", sel.value); renderWordList(); });
+  $("wordSearch").addEventListener("input", (e) => { wordView.q = e.target.value; renderWordList(); });
+}
+
 /* ------------------------------------------------------------------
  * Вежбање
  * ------------------------------------------------------------------ */
@@ -1856,7 +2345,7 @@ const quiz = {
 // Свака ставка: id, питање на једном језику, тачан одговор на другом.
 function quizPool(max = levelRank(quiz.level)) {
   const pool = [];
-  if (quiz.source !== "phrases") {
+  if (quiz.source === "all" || quiz.source === "idioms") {
     for (const i of IDIOMS) {
       if (levelRank(i.level) > max) continue;
       const toNo = i.dir === "sr";
@@ -1872,7 +2361,14 @@ function quizPool(max = levelRank(quiz.level)) {
       });
     }
   }
-  if (quiz.source !== "idioms") {
+  if (quiz.source === "all" || quiz.source === "words") {
+    for (const w of WORDS) {
+      if (levelRank(w.level) > max) continue;
+      pool.push({ id: "w:" + w.no, kind: "w", prompt: w.no, answer: w.sr, promptNo: true, level: w.level, explain: [w.forms, w.note].filter(Boolean).join(" · ") });
+      pool.push({ id: "v:" + w.no, kind: "w", prompt: w.sr, answer: w.no, promptNo: false, level: w.level, explain: [w.forms, w.note].filter(Boolean).join(" · ") });
+    }
+  }
+  if (quiz.source === "all" || quiz.source === "phrases") {
     for (const p of PHRASES) {
       if (levelRank(p.level) > max) continue;
       pool.push({ id: "p:" + p.no, kind: "p", prompt: p.no, answer: p.sr, promptNo: true, level: p.level, explain: p.note || "" });
@@ -2022,6 +2518,7 @@ async function checkUpdates() {
 }
 
 function initExtras() {
+  initWords();
   document.querySelectorAll(".tabs button").forEach((b) => b.addEventListener("click", () => showTab(b.dataset.tab)));
 
   // Изрази

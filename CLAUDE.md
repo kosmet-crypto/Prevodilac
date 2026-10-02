@@ -24,7 +24,13 @@ style of the surrounding code).
   (Serbian: Latin, lower case, no diacritics, đ → dj; Norwegian: lower case). `has: false` means
   there is no real equivalent and `equivalent` is the most natural description.
 - `PHRASES` / `PHRASE_CATS`: everyday phrases by situation, Serbian in Cyrillic, Norwegian bokmål.
-- Every entry has a CEFR `level`; the Изрази/Фразе tabs and the quiz filter by it.
+- `WORDS` / `WORD_TOPICS`: vocabulary as `[no, forms, sr, level, topic, note]`. Nouns with
+  en/ei/et and forms "definite sg, indefinite pl, definite pl"; verbs with "å" and forms
+  "present, preterite, har + perfect"; adjectives "neuter, plural". All listed forms are indexed so
+  "Речи из текста" can find inflected words in translations.
+- Every entry has a CEFR `level` (checked, not copied blindly); the Изрази/Фразе/Речи tabs and the
+  quiz filter by it. The owner may paste batches generated in another Claude chat: verify the
+  Norwegian, drop duplicates, fix levels and report which levels were changed.
 - Only add Norwegian you are confident is correct, natural bokmål.
 
 ## Rules that keep updates working
