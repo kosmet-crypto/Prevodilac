@@ -1,6 +1,6 @@
 /* Prevodilac service worker: offline support.
    Bump VERSION when shipping changes to index.html or the app shell list below. */
-const VERSION = 'prevodilac-v2';
+const VERSION = 'prevodilac-v3';
 const SHELL = [
   './',
   './index.html',
