@@ -92,12 +92,32 @@
         <div id="phrases"></div>
       </article>
 
+      <article class="card" id="wordsCard">
+        <header class="card-head"><h2>Речник</h2></header>
+        <p class="explain muted">Норвешке речи из превода, одабране према твом нивоу: основни облик, важни облици и значење.</p>
+        <table class="words">
+          <thead><tr><th>Norsk</th><th>Српски</th></tr></thead>
+          <tbody id="words"></tbody>
+        </table>
+      </article>
+
       <article class="card" id="notesCard">
         <header class="card-head"><h2>Напомене о граматици и регистру</h2></header>
         <ul id="notes" class="notes"></ul>
       </article>
     </section>
   </main>
+
+  <footer class="credits">
+    <p>
+      Преводи прави <a href="https://www.anthropic.com/claude" target="_blank" rel="noopener">Claude</a>
+      (Anthropic) преко твог API кључа. Апликацију је направио
+      <a href="https://github.com/kosmet-crypto" target="_blank" rel="noopener">kosmet-crypto</a>
+      уз помоћ <a href="https://claude.com/claude-code" target="_blank" rel="noopener">Claude Code</a>.
+    </p>
+    <p>Изговор: Web Speech API прегледача. Нивои: Заједнички европски референтни оквир за језике (CEFR), Савет Европе.</p>
+    <p>Машински превод може да погреши — за важне текстове провери са изворним говорником.</p>
+  </footer>
 
   <!-- Подешавања -->
   <dialog id="settingsDialog" class="dialog">
