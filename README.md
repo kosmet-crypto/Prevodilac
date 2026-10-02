@@ -83,13 +83,6 @@ ID модела.
 | `style.css` | стил, светла/тамна тема, прилагођавање телефону |
 | `app.js` | логика: CEFR нивои, позив Claude API-ја, приказ, историја, изговор |
 
-## Заслуге
+## Аутор
 
-- Апликацију је направио [kosmet-crypto](https://github.com/kosmet-crypto) уз помоћ
-  [Claude Code](https://claude.com/claude-code).
-- Преводе прави [Claude](https://www.anthropic.com/claude) (Anthropic), преко Anthropic
-  Messages API-ја и API кључа корисника.
-- Изговор ради преко Web Speech API-ја прегледача.
-- Опис нивоа прати Заједнички европски референтни оквир за језике
-  ([CEFR](https://www.coe.int/en/web/common-european-framework-reference-languages)),
-  Савет Европе.
+Ivan S. · Epicurus001 · Srbija / Norge
